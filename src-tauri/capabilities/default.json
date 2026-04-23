@@ -16,6 +16,7 @@
     "fs:allow-create",
     "fs:allow-mkdir",
     "fs:allow-exists",
-    "shell:default"
+    "shell:default",
+    "updater:default"
   ]
 }

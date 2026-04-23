@@ -1,5 +1,7 @@
 <script lang="ts">
-import { Check, X } from 'lucide-svelte';
+import { Check, X, Download, RotateCcw } from 'lucide-svelte';
+import { getVersion } from '@tauri-apps/api/app';
+import { check } from '@tauri-apps/plugin-updater';
 import {
 	getSettings,
 	semanticIndexRebuild,
@@ -24,6 +26,14 @@ let rebuildError = $state<string | null>(null);
 let testStatus = $state<'idle' | 'testing' | OllamaHealth['message']>('idle');
 let testOk = $state<boolean | null>(null);
 
+// Updater state
+let appVersion = $state<string>('');
+let updateStatus = $state<'idle' | 'checking' | 'available' | 'downloading' | 'installing' | 'uptodate' | 'error'>('idle');
+let updateError = $state<string | null>(null);
+let updateVersion = $state<string>('');
+let updateBody = $state<string>('');
+let downloadProgress = $state<number>(0);
+
 $effect(() => {
 	if (!open) {
 		onClose();
@@ -33,6 +43,9 @@ $effect(() => {
 $effect(() => {
 	getSettings().then((s) => {
 		settings = { ...s };
+	});
+	getVersion().then((v) => {
+		appVersion = v;
 	});
 });
 
@@ -72,6 +85,57 @@ async function handleTestConnection() {
 	}
 }
 
+async function handleCheckUpdate() {
+	updateStatus = 'checking';
+	updateError = null;
+	updateVersion = '';
+	updateBody = '';
+	try {
+		const update = await check();
+		if (update) {
+			updateStatus = 'available';
+			updateVersion = update.version;
+			updateBody = update.body || '';
+		} else {
+			updateStatus = 'uptodate';
+		}
+	} catch (e) {
+		updateStatus = 'error';
+		updateError = String(e);
+	}
+}
+
+async function handleDownloadAndInstall() {
+	updateStatus = 'downloading';
+	try {
+		const update = await check();
+		if (!update) {
+			updateStatus = 'uptodate';
+			return;
+		}
+		await update.downloadAndInstall((event) => {
+			switch (event.event) {
+				case 'Started':
+					updateStatus = 'downloading';
+					downloadProgress = 0;
+					break;
+				case 'Progress':
+					updateStatus = 'downloading';
+					downloadProgress = event.data.percentage || 0;
+					break;
+				case 'Finished':
+					updateStatus = 'installing';
+					break;
+			}
+		});
+		// Restart the app after install
+		await update.restartToApply();
+	} catch (e) {
+		updateStatus = 'error';
+		updateError = String(e);
+	}
+}
+
 const tabItems = [
 	{ value: 'general', label: 'General' },
 	{ value: 'ai', label: 'AI / Search' },
@@ -93,6 +157,58 @@ const tabItems = [
               onchange={saveSettings}
             />
             <span class="hint">Path to the nvim executable used in the terminal pane.</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Version</span>
+            <span class="hint">{appVersion}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Updates</span>
+            <div class="update-row">
+              <Button
+                variant="default"
+                size="sm"
+                onclick={handleCheckUpdate}
+                disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'installing'}
+              >
+                {#if updateStatus === 'checking'}
+                  Checking…
+                {:else if updateStatus === 'downloading'}
+                  Downloading… {Math.round(downloadProgress)}%
+                {:else if updateStatus === 'installing'}
+                  Installing…
+                {:else if updateStatus === 'available'}
+                  <Download size={14} /> Update to {updateVersion}
+                {:else if updateStatus === 'uptodate'}
+                  <Check size={14} /> Up to date
+                {:else if updateStatus === 'error'}
+                  <RotateCcw size={14} /> Retry
+                {:else}
+                  Check for Updates
+                {/if}
+              </Button>
+              {#if updateStatus === 'available'}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onclick={handleDownloadAndInstall}
+                >
+                  <Download size={14} /> Download & Install
+                </Button>
+              {/if}
+            </div>
+            {#if updateStatus === 'available' && updateBody}
+              <div class="update-body">{updateBody}</div>
+            {/if}
+            {#if updateStatus === 'error'}
+              <span class="hint error">{updateError}</span>
+            {:else if updateStatus === 'uptodate'}
+              <span class="hint">You are on the latest version.</span>
+            {:else if updateStatus !== 'available' && updateStatus !== 'downloading' && updateStatus !== 'installing'}
+              <span class="hint">Manually check for and install app updates.</span>
+            {/if}
           </div>
         {:else if activeTab === 'ai'}
           <div class="field">
@@ -224,6 +340,20 @@ const tabItems = [
   }
   .hint.error {
     color: var(--error);
+  }
+  .update-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .update-body {
+    font-size: 11px;
+    color: var(--muted-2);
+    margin-top: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.4;
   }
   .footer {
     display: flex;

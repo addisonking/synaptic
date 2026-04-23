@@ -36,5 +36,13 @@
     "icon": [
       "icons/icon.png"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZFQURGMTNCRkE2NDg3MUQKUldRZGgyVDZPL0d0Ym9xZTdZNnNqK2R6VUNRSjFQem44dkxmTkZKcGVYUm9BNjRrbEJKekdNTEMK",
+      "endpoints": [
+        "https://github.com/addisonking/synaptic/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

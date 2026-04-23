@@ -28,3 +28,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Updater signing keys
+src-tauri/updater_key
+src-tauri/updater_key.pub
