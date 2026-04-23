@@ -91,13 +91,7 @@ async function main() {
   const currentVersion = pkg.version;
   const newVersion = bumpVersion(currentVersion, bumpType);
 
-  console.log(`bumping ${bumpType}: ${currentVersion} -> ${newVersion}`);
-
-  updatePackageJson(root, newVersion);
-  updateCargoToml(root, newVersion);
-  updateTauriConf(root, newVersion);
-
-  // check for uncommitted changes
+  // check for uncommitted changes before modifying anything
   const statusProc = Bun.spawn(["git", "status", "--porcelain"], {
     cwd: root,
     stdout: "pipe",
@@ -109,6 +103,12 @@ async function main() {
     console.error("commit or stash them before running this script.");
     process.exit(1);
   }
+
+  console.log(`bumping ${bumpType}: ${currentVersion} -> ${newVersion}`);
+
+  updatePackageJson(root, newVersion);
+  updateCargoToml(root, newVersion);
+  updateTauriConf(root, newVersion);
 
   const tag = `v${newVersion}`;
 
