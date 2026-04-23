@@ -14,8 +14,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-          fetch-tags: true
+          fetch-depth: 0
 
       - name: setup bun
         uses: oven-sh/setup-bun@v2
@@ -42,9 +41,6 @@ jobs:
 
       - name: install frontend dependencies
         run: bun install
-
-      - name: unshallow for tags
-        run: git fetch --prune --unshallow --tags
 
       - name: get previous tag
         id: prev_tag
@@ -91,8 +87,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-          fetch-tags: true
+          fetch-depth: 0
 
       - name: setup bun
         uses: oven-sh/setup-bun@v2
@@ -117,10 +112,6 @@ jobs:
 
       - name: install frontend dependencies
         run: bun install
-
-      - name: unshallow for tags
-        shell: bash
-        run: git fetch --prune --unshallow --tags
 
       - name: get previous tag
         id: prev_tag
@@ -169,8 +160,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-          fetch-tags: true
+          fetch-depth: 0
 
       - name: install system dependencies
         run: |
@@ -200,9 +190,6 @@ jobs:
 
       - name: install frontend dependencies
         run: bun install
-
-      - name: unshallow for tags
-        run: git fetch --prune --unshallow --tags
 
       - name: get previous tag
         id: prev_tag
