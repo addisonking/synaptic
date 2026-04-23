@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+
+# Build outputs
+build
+.svelte-kit
+dist
+
+# Tauri
+target
+gen
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
