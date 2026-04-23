@@ -21,6 +21,7 @@ import NvimTerminal from '$lib/components/NvimTerminal.svelte';
 import SemanticSearch from '$lib/components/SemanticSearch.svelte';
 import Settings from '$lib/components/Settings.svelte';
 import Titlebar from '$lib/components/Titlebar.svelte';
+import UpdatePrompt from '$lib/components/UpdatePrompt.svelte';
 import {
 	appState,
 	goBack,
@@ -30,6 +31,7 @@ import {
 	refreshFileTree,
 } from '$lib/store.svelte';
 import type { DependencyStatus } from '$lib/types';
+import { checkForUpdate } from '$lib/updater.svelte';
 
 let showFindOrCreate = $state(false);
 let showNewNote = $state(false);
@@ -38,6 +40,7 @@ let showGhostLinks = $state(false);
 let newNoteName = $state('');
 let ptyId = $state(0);
 let nvimTerminalRef: { blur(): void; focus(): void } | undefined = $state();
+let showUpdatePrompt = $state(false);
 
 let depsReady = $state(false);
 let depsSatisfied = $state(false);
@@ -63,6 +66,15 @@ onMount(() => {
 		.catch(() => {
 			depsReady = true;
 		});
+
+	// Auto-check for updates after a short delay so it doesn't block startup
+	setTimeout(() => {
+		checkForUpdate().then((update) => {
+			if (update) {
+				showUpdatePrompt = true;
+			}
+		});
+	}, 3000);
 
 	const handleKeydown = (e: KeyboardEvent) => {
 		// Disable global shortcuts when no vault is open (landing screen)
@@ -141,7 +153,8 @@ onMount(() => {
 				appState.showHelp ||
 				appState.showGraph ||
 				appState.showSettings ||
-				appState.showGhostLinks;
+				appState.showGhostLinks ||
+				showUpdatePrompt;
 			showFindOrCreate = false;
 			showNewNote = false;
 			showSemanticSearch = false;
@@ -149,6 +162,7 @@ onMount(() => {
 			appState.showGraph = false;
 			appState.showSettings = false;
 			appState.showGhostLinks = false;
+			showUpdatePrompt = false;
 			if (hadDialog) {
 				nvimTerminalRef?.focus();
 			}
@@ -162,7 +176,8 @@ onMount(() => {
 			showSemanticSearch ||
 			appState.showHelp ||
 			appState.showSettings ||
-			appState.showGhostLinks
+			appState.showGhostLinks ||
+			showUpdatePrompt
 		) {
 			return;
 		}
@@ -309,6 +324,9 @@ async function handleCreateVault(parent: string, name: string) {
 {/if}
 {#if appState.showGhostLinks}
   <GhostLinks onClose={() => appState.showGhostLinks = false} />
+{/if}
+{#if showUpdatePrompt}
+  <UpdatePrompt onClose={() => showUpdatePrompt = false} />
 {/if}
 
 <style>

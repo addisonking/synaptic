@@ -1,7 +1,4 @@
 <script lang="ts">
-import { getVersion } from '@tauri-apps/api/app';
-import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 import { Check, Download, RotateCcw, X } from 'lucide-svelte';
 import {
 	getSettings,
@@ -12,6 +9,12 @@ import {
 import { Button, Dialog, Input, Tabs } from '$lib/components/ui';
 import { appState } from '$lib/store.svelte';
 import type { AppSettings, OllamaHealth } from '$lib/types';
+import {
+	checkForUpdate,
+	downloadAndInstallUpdate,
+	initAppVersion,
+	updater,
+} from '$lib/updater.svelte';
 
 interface Props {
 	onClose: () => void;
@@ -27,22 +30,6 @@ let rebuildError = $state<string | null>(null);
 let testStatus = $state<'idle' | 'testing' | OllamaHealth['message']>('idle');
 let testOk = $state<boolean | null>(null);
 
-// Updater state
-let appVersion = $state<string>('');
-let updateStatus = $state<
-	| 'idle'
-	| 'checking'
-	| 'available'
-	| 'downloading'
-	| 'installing'
-	| 'uptodate'
-	| 'error'
->('idle');
-let updateError = $state<string | null>(null);
-let updateVersion = $state<string>('');
-let updateBody = $state<string>('');
-let downloadProgress = $state<number>(0);
-
 $effect(() => {
 	if (!open) {
 		onClose();
@@ -53,9 +40,7 @@ $effect(() => {
 	getSettings().then((s) => {
 		settings = { ...s };
 	});
-	getVersion().then((v) => {
-		appVersion = v;
-	});
+	initAppVersion();
 });
 
 async function saveSettings() {
@@ -94,57 +79,6 @@ async function handleTestConnection() {
 	}
 }
 
-async function handleCheckUpdate() {
-	updateStatus = 'checking';
-	updateError = null;
-	updateVersion = '';
-	updateBody = '';
-	try {
-		const update = await check();
-		if (update) {
-			updateStatus = 'available';
-			updateVersion = update.version;
-			updateBody = update.body || '';
-		} else {
-			updateStatus = 'uptodate';
-		}
-	} catch (e) {
-		updateStatus = 'error';
-		updateError = String(e);
-	}
-}
-
-async function handleDownloadAndInstall() {
-	updateStatus = 'downloading';
-	try {
-		const update = await check();
-		if (!update) {
-			updateStatus = 'uptodate';
-			return;
-		}
-		await update.downloadAndInstall((event) => {
-			switch (event.event) {
-				case 'Started':
-					updateStatus = 'downloading';
-					downloadProgress = 0;
-					break;
-				case 'Progress':
-					updateStatus = 'downloading';
-					downloadProgress = event.data.percentage || 0;
-					break;
-				case 'Finished':
-					updateStatus = 'installing';
-					break;
-			}
-		});
-		// Restart the app after install
-		await relaunch();
-	} catch (e) {
-		updateStatus = 'error';
-		updateError = String(e);
-	}
-}
-
 const tabItems = [
 	{ value: 'general', label: 'General' },
 	{ value: 'ai', label: 'AI / Search' },
@@ -170,52 +104,43 @@ const tabItems = [
 
           <div class="field">
             <span class="field-label">Version</span>
-            <span class="hint">{appVersion}</span>
+            <span class="hint">{updater.appVersion}</span>
           </div>
 
           <div class="field">
             <span class="field-label">Updates</span>
             <div class="update-row">
               <Button
-                variant="default"
+                variant={updater.status === 'available' ? 'primary' : 'default'}
                 size="sm"
-                onclick={handleCheckUpdate}
-                disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'installing'}
+                onclick={updater.status === 'available' ? downloadAndInstallUpdate : checkForUpdate}
+                disabled={updater.status === 'checking' || updater.status === 'downloading' || updater.status === 'installing'}
               >
-                {#if updateStatus === 'checking'}
+                {#if updater.status === 'checking'}
                   Checking…
-                {:else if updateStatus === 'downloading'}
-                  Downloading… {Math.round(downloadProgress)}%
-                {:else if updateStatus === 'installing'}
+                {:else if updater.status === 'downloading'}
+                  Downloading… {Math.round(updater.progress)}%
+                {:else if updater.status === 'installing'}
                   Installing…
-                {:else if updateStatus === 'available'}
-                  <Download size={14} /> Update to {updateVersion}
-                {:else if updateStatus === 'uptodate'}
+                {:else if updater.status === 'available'}
+                  <Download size={14} /> Download & Install v{updater.version}
+                {:else if updater.status === 'uptodate'}
                   <Check size={14} /> Up to date
-                {:else if updateStatus === 'error'}
+                {:else if updater.status === 'error'}
                   <RotateCcw size={14} /> Retry
                 {:else}
                   Check for Updates
                 {/if}
               </Button>
-              {#if updateStatus === 'available'}
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onclick={handleDownloadAndInstall}
-                >
-                  <Download size={14} /> Download & Install
-                </Button>
-              {/if}
             </div>
-            {#if updateStatus === 'available' && updateBody}
-              <div class="update-body">{updateBody}</div>
+            {#if updater.status === 'available' && updater.body}
+              <div class="update-body">{updater.body}</div>
             {/if}
-            {#if updateStatus === 'error'}
-              <span class="hint error">{updateError}</span>
-            {:else if updateStatus === 'uptodate'}
+            {#if updater.status === 'error'}
+              <span class="hint error">{updater.error}</span>
+            {:else if updater.status === 'uptodate'}
               <span class="hint">You are on the latest version.</span>
-            {:else if updateStatus !== 'available' && updateStatus !== 'downloading' && updateStatus !== 'installing'}
+            {:else if updater.status !== 'available' && updater.status !== 'downloading' && updater.status !== 'installing'}
               <span class="hint">Manually check for and install app updates.</span>
             {/if}
           </div>
