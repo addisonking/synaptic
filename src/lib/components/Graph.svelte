@@ -333,11 +333,21 @@ function draw() {
 	ctx.restore();
 }
 
+function ensureLoop() {
+	if (running && animFrame === 0) {
+		loop();
+	}
+}
+
 function loop() {
 	if (!running) return;
 	tick();
 	draw();
-	animFrame = requestAnimationFrame(loop);
+	if (alpha >= 0.001 || dragging || panning) {
+		animFrame = requestAnimationFrame(loop);
+	} else {
+		animFrame = 0;
+	}
 }
 
 // --- Input ---
@@ -380,6 +390,7 @@ function onMouseDown(e: MouseEvent) {
 		panStartX = e.clientX - panX;
 		panStartY = e.clientY - panY;
 	}
+	ensureLoop();
 }
 
 function onMouseMove(e: MouseEvent) {
@@ -397,7 +408,10 @@ function onMouseMove(e: MouseEvent) {
 		const prev = hoveredNode;
 		hoveredNode = hitTest(e.clientX, e.clientY);
 		canvas.style.cursor = hoveredNode ? 'pointer' : 'default';
-		if (hoveredNode !== prev) alpha = Math.max(alpha, 0.05);
+		if (hoveredNode !== prev) {
+			alpha = Math.max(alpha, 0.05);
+			ensureLoop();
+		}
 	}
 }
 
@@ -427,6 +441,7 @@ function onWheel(e: WheelEvent) {
 	panX = mx - (mx - panX) * factor;
 	panY = my - (my - panY) * factor;
 	scale = Math.max(0.15, Math.min(6, scale * factor));
+	ensureLoop();
 }
 
 function resetView() {
@@ -440,6 +455,7 @@ function resetView() {
 		panY = 0;
 	}
 	alpha = 0.15;
+	ensureLoop();
 }
 
 function centerOnNode(n: SimNode) {
@@ -458,6 +474,7 @@ function centerOnNode(n: SimNode) {
 		const ease = 1 - (1 - t) ** 3;
 		panX = startPanX + (targetPanX - startPanX) * ease;
 		panY = startPanY + (targetPanY - startPanY) * ease;
+		draw();
 		if (t < 1) requestAnimationFrame(animate);
 	}
 	requestAnimationFrame(animate);
@@ -490,14 +507,17 @@ function doSearch() {
 		const best = scored[0].node;
 		selectedNode = best;
 		centerOnNode(best);
+		ensureLoop();
 	} else {
 		selectedNode = null;
+		ensureLoop();
 	}
 }
 
 function clearSearch() {
 	searchQuery = '';
 	selectedNode = null;
+	ensureLoop();
 }
 
 function resize() {

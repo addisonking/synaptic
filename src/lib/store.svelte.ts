@@ -1,3 +1,4 @@
+import { fileTree } from './api';
 import type { FileNode, SearchResult, SystemInfo } from './types';
 
 // Global application state using Svelte 5 runes
@@ -36,6 +37,13 @@ export function setRecentSystems(systems: SystemInfo[]) {
 
 export function setFileTree(tree: FileNode[]) {
 	appState.fileTree = tree;
+}
+
+export async function refreshFileTree(): Promise<FileNode[]> {
+	if (!appState.system) return [];
+	const tree = await fileTree(appState.system.path);
+	appState.fileTree = tree;
+	return tree;
 }
 
 export function openFile(path: string, content: string) {

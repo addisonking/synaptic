@@ -1,6 +1,11 @@
 <script lang="ts">
 import { fileDelete } from '$lib/api';
-import { appState, goBack, goForward } from '$lib/store.svelte';
+import {
+	appState,
+	goBack,
+	goForward,
+	refreshFileTree,
+} from '$lib/store.svelte';
 
 interface Props {
 	onFindOrCreate: () => void;
@@ -18,6 +23,7 @@ async function handleDelete() {
 		await fileDelete(appState.openFilePath);
 		appState.openFilePath = null;
 		appState.openFileContent = '';
+		refreshFileTree();
 		deleteClicks = 0;
 	}
 	setTimeout(() => (deleteClicks = 0), 2000);

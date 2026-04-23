@@ -1,8 +1,8 @@
 <script lang="ts">
 import { Command } from 'bits-ui';
-import { fileCreate, fileRead, fileTree } from '$lib/api';
+import { fileCreate, fileRead } from '$lib/api';
 import { Dialog } from '$lib/components/ui';
-import { appState, openFile } from '$lib/store.svelte';
+import { appState, openFile, refreshFileTree } from '$lib/store.svelte';
 import type { FileNode } from '$lib/types';
 
 interface Props {
@@ -22,9 +22,14 @@ $effect(() => {
 
 $effect(() => {
 	if (appState.system) {
-		fileTree(appState.system.path).then((tree) => {
+		const tree = appState.fileTree;
+		if (tree.length > 0) {
 			flatFiles = flattenTree(tree);
-		});
+		} else {
+			refreshFileTree().then((t) => {
+				flatFiles = flattenTree(t);
+			});
+		}
 	}
 });
 
@@ -71,6 +76,7 @@ async function handleSelect(file?: { name: string; path: string }) {
 		await fileCreate(newPath);
 		const content = await fileRead(newPath);
 		openFile(newPath, content);
+		refreshFileTree();
 	} else if (target) {
 		const content = await fileRead(target.path);
 		openFile(target.path, content);

@@ -25,6 +25,7 @@ import {
 	goForward,
 	loadZoom,
 	openFile,
+	refreshFileTree,
 } from '$lib/store.svelte';
 
 let showFindOrCreate = $state(false);
@@ -170,6 +171,7 @@ async function handleOpenVault(path: string) {
 	const system = await systemOpen(path);
 	appState.system = system;
 	appState.recentSystems = await systemListRecent();
+	refreshFileTree();
 	// Try to open last file
 	try {
 		const config = await vaultGetConfig(system.path);

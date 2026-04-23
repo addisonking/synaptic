@@ -1,7 +1,7 @@
 <script lang="ts">
 import { fileCreate, fileRead } from '$lib/api';
 import { Button, Dialog, Input } from '$lib/components/ui';
-import { appState, openFile } from '$lib/store.svelte';
+import { appState, openFile, refreshFileTree } from '$lib/store.svelte';
 
 interface Props {
 	onClose: () => void;
@@ -29,6 +29,7 @@ async function handleSubmit() {
 	await fileCreate(newPath);
 	const content = await fileRead(newPath);
 	openFile(newPath, content);
+	refreshFileTree();
 	open = false;
 }
 
