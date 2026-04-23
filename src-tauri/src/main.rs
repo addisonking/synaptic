@@ -477,7 +477,7 @@ async fn check_dependencies_cmd(app: AppHandle) -> Result<DependencyStatus, Stri
     let settings = get_settings(&app).unwrap_or_default();
 
     let nvim_path = {
-        let mut candidates: Vec<&str> = vec!["nvim", "/opt/homebrew/bin/nvim", "/usr/local/bin/nvim", "/usr/bin/nvim", "vim", "/opt/homebrew/bin/vim", "/usr/local/bin/vim"];
+        let mut candidates: Vec<&str> = vec!["nvim", "/opt/homebrew/bin/nvim", "/usr/local/bin/nvim", "/usr/bin/nvim", "vim", "/opt/homebrew/bin/vim", "/usr/local/bin/vim", "C:\\Program Files\\Neovim\\bin\\nvim.exe", "C:\\tools\\neovim\\Neovim\\bin\\nvim.exe"];
         if let Some(ref p) = settings.nvim_path {
             if !p.is_empty() {
                 candidates.insert(0, p.as_str());

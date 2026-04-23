@@ -37,6 +37,8 @@ fn resolve_nvim() -> String {
         "vim",
         "/opt/homebrew/bin/vim",
         "/usr/local/bin/vim",
+        "C:\\Program Files\\Neovim\\bin\\nvim.exe",
+        "C:\\tools\\neovim\\Neovim\\bin\\nvim.exe",
     ];
     for c in &candidates {
         if which::which(c).is_ok() {
