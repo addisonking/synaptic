@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { Separator } from "bits-ui";
-  import { cn } from "$lib/utils";
+import { Separator } from 'bits-ui';
+import { cn } from '$lib/utils';
 
-  interface Props {
-    class?: string;
-    orientation?: "horizontal" | "vertical";
-  }
+interface Props {
+	class?: string;
+	orientation?: 'horizontal' | 'vertical';
+}
 
-  let { class: className, orientation = "horizontal" }: Props = $props();
+let { class: className, orientation = 'horizontal' }: Props = $props();
 </script>
 
 <Separator.Root

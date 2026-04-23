@@ -1,75 +1,75 @@
 <script lang="ts">
-  import { appState, openFile } from '$lib/store.svelte';
-  import { semanticSearch, fileRead } from '$lib/api';
-  import type { SemanticResult } from '$lib/types';
-  import { Command } from 'bits-ui';
-  import { Dialog } from '$lib/components/ui';
+import { Command } from 'bits-ui';
+import { fileRead, semanticSearch } from '$lib/api';
+import { Dialog } from '$lib/components/ui';
+import { appState, openFile } from '$lib/store.svelte';
+import type { SemanticResult } from '$lib/types';
 
-  interface Props {
-    onClose: () => void;
-  }
+interface Props {
+	onClose: () => void;
+}
 
-  let { onClose }: Props = $props();
-  let open = $state(true);
-  let query = $state('');
-  let results = $state<SemanticResult[]>([]);
-  let isSearching = $state(false);
-  let searchError = $state<string | null>(null);
-  let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let { onClose }: Props = $props();
+let open = $state(true);
+let query = $state('');
+let results = $state<SemanticResult[]>([]);
+let isSearching = $state(false);
+let searchError = $state<string | null>(null);
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  $effect(() => {
-    if (!open) {
-      onClose();
-    }
-  });
+$effect(() => {
+	if (!open) {
+		onClose();
+	}
+});
 
-  async function doSearch() {
-    if (!appState.system || query.trim().length < 2) {
-      results = [];
-      searchError = null;
-      isSearching = false;
-      return;
-    }
-    isSearching = true;
-    searchError = null;
-    try {
-      results = await semanticSearch(appState.system.path, query.trim());
-    } catch (e) {
-      searchError = String(e);
-      results = [];
-    } finally {
-      isSearching = false;
-    }
-  }
+async function doSearch() {
+	if (!appState.system || query.trim().length < 2) {
+		results = [];
+		searchError = null;
+		isSearching = false;
+		return;
+	}
+	isSearching = true;
+	searchError = null;
+	try {
+		results = await semanticSearch(appState.system.path, query.trim());
+	} catch (e) {
+		searchError = String(e);
+		results = [];
+	} finally {
+		isSearching = false;
+	}
+}
 
-  $effect(() => {
-    const q = query;
-    if (searchTimeout) clearTimeout(searchTimeout);
-    if (q.trim().length < 2) {
-      results = [];
-      searchError = null;
-      isSearching = false;
-      return;
-    }
-    searchTimeout = setTimeout(() => {
-      doSearch();
-    }, 300);
-  });
+$effect(() => {
+	const q = query;
+	if (searchTimeout) clearTimeout(searchTimeout);
+	if (q.trim().length < 2) {
+		results = [];
+		searchError = null;
+		isSearching = false;
+		return;
+	}
+	searchTimeout = setTimeout(() => {
+		doSearch();
+	}, 300);
+});
 
-  async function handleSelect(result: SemanticResult) {
-    const content = await fileRead(result.path);
-    openFile(result.path, content);
-    open = false;
-  }
+async function handleSelect(result: SemanticResult) {
+	const content = await fileRead(result.path);
+	openFile(result.path, content);
+	open = false;
+}
 
-  function truncate(text: string, max: number) {
-    if (text.length <= max) return text;
-    return text.slice(0, max).trimEnd() + '…';
-  }
+function truncate(text: string, max: number) {
+	if (text.length <= max) return text;
+	return `${text.slice(0, max).trimEnd()}…`;
+}
 
-  function formatScore(score: number) {
-    return score.toFixed(3);
-  }
+function formatScore(score: number) {
+	return score.toFixed(3);
+}
 </script>
 
 <Dialog bind:open position="top" contentClass="search-dialog" showClose={false}>

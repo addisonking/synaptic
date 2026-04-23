@@ -1,139 +1,140 @@
 /* Global OLED-dark styles */
 * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
 }
 
 :root {
-  --bg: #000000;
-  --surface-1: #0a0a0a;
-  --surface-2: #1a1a1a;
-  --surface-3: #2a2a2a;
-  --text: #aaaaaa;
-  --text-bright: #cccccc;
-  --text-active: #ffffff;
-  --muted-1: #444444;
-  --muted-2: #555555;
-  --muted-3: #666666;
-  --error: #cc4444;
-  --border: #1a1a1a;
-  --font: 'Geist Mono', 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+	--bg: #000000;
+	--surface-1: #0a0a0a;
+	--surface-2: #1a1a1a;
+	--surface-3: #2a2a2a;
+	--text: #aaaaaa;
+	--text-bright: #cccccc;
+	--text-active: #ffffff;
+	--muted-1: #444444;
+	--muted-2: #555555;
+	--muted-3: #666666;
+	--error: #cc4444;
+	--border: #1a1a1a;
+	--font: "Geist Mono", "SF Mono", "Fira Code", "JetBrains Mono", monospace;
 }
 
-html, body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 13px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+html,
+body {
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font);
+	font-size: 13px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	height: 100%;
+	width: 100%;
+	overflow: hidden;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+	width: 6px;
+	height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #111111;
+	background: #111111;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
-  border-radius: 0;
+	background: #2a2a2a;
+	border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a3a;
+	background: #3a3a3a;
 }
 
 button {
-  font-family: var(--font);
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: inherit;
+	font-family: var(--font);
+	cursor: pointer;
+	border: none;
+	background: none;
+	color: inherit;
 }
 
 input {
-  font-family: var(--font);
-  background: var(--surface-1);
-  color: var(--text);
-  border: 1px solid var(--surface-2);
-  padding: 8px 12px;
-  outline: none;
+	font-family: var(--font);
+	background: var(--surface-1);
+	color: var(--text);
+	border: 1px solid var(--surface-2);
+	padding: 8px 12px;
+	outline: none;
 }
 
 input:focus {
-  border-color: var(--muted-3);
+	border-color: var(--muted-3);
 }
 
 ::selection {
-  background: var(--surface-3);
-  color: var(--text-active);
+	background: var(--surface-3);
+	color: var(--text-active);
 }
 
 /* Command palette styles */
 .cmd-root {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  background: var(--surface-1);
-  overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	background: var(--surface-1);
+	overflow: hidden;
 }
 .cmd-input {
-  width: 100%;
-  padding: 16px;
-  font-size: 14px;
-  border: none;
-  border-bottom: 1px solid var(--surface-2);
-  background: var(--surface-1);
-  color: var(--text-bright);
-  outline: none;
-  font-family: var(--font);
+	width: 100%;
+	padding: 16px;
+	font-size: 14px;
+	border: none;
+	border-bottom: 1px solid var(--surface-2);
+	background: var(--surface-1);
+	color: var(--text-bright);
+	outline: none;
+	font-family: var(--font);
 }
 .cmd-input::placeholder {
-  color: var(--muted-2);
+	color: var(--muted-2);
 }
 .cmd-list {
-  max-height: 420px;
-  overflow-y: auto;
-  overflow-x: hidden;
+	max-height: 420px;
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 .cmd-item {
-  width: 100%;
-  text-align: left;
-  padding: 10px 16px;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  font-size: 13px;
-  transition: background 80ms;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  cursor: pointer;
-  font-family: var(--font);
+	width: 100%;
+	text-align: left;
+	padding: 10px 16px;
+	border: none;
+	background: transparent;
+	color: var(--text);
+	font-size: 13px;
+	transition: background 80ms;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	cursor: pointer;
+	font-family: var(--font);
 }
 .cmd-item:hover,
 .cmd-item[data-selected] {
-  background: var(--surface-2);
+	background: var(--surface-2);
 }
 .cmd-empty {
-  padding: 24px;
-  text-align: center;
-  color: var(--muted-2);
-  font-size: 13px;
+	padding: 24px;
+	text-align: center;
+	color: var(--muted-2);
+	font-size: 13px;
 }
 .cmd-group-heading {
-  padding: 8px 16px;
-  font-size: 10px;
-  color: var(--muted-2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+	padding: 8px 16px;
+	font-size: 10px;
+	color: var(--muted-2);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
 }

@@ -1,122 +1,126 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { appState, openFile } from '$lib/store.svelte';
-  import { getBacklinks, findNote, fileRead } from '$lib/api';
-  import { renderMarkdown, parseFrontmatter } from '$lib/markdown';
-  import type { BacklinkInfo } from '$lib/types';
-  import 'katex/dist/katex.min.css';
-  import 'highlight.js/styles/github-dark.min.css';
-  import { ChevronRight, ChevronDown } from 'lucide-svelte';
+import { onMount } from 'svelte';
+import { fileRead, findNote, getBacklinks } from '$lib/api';
+import { parseFrontmatter, renderMarkdown } from '$lib/markdown';
+import { appState, openFile } from '$lib/store.svelte';
+import type { BacklinkInfo } from '$lib/types';
+import 'katex/dist/katex.min.css';
+import 'highlight.js/styles/github-dark.min.css';
+import { ChevronDown, ChevronRight } from 'lucide-svelte';
 
-  let renderedHtml = $state('');
-  let tags = $state<string[]>([]);
-  let backlinks = $state<BacklinkInfo[]>([]);
-  let backlinksCollapsed = $state(true);
-  let previewEl = $state<HTMLDivElement | null>(null);
+let renderedHtml = $state('');
+let tags = $state<string[]>([]);
+let backlinks = $state<BacklinkInfo[]>([]);
+let backlinksCollapsed = $state(true);
+let previewEl = $state<HTMLDivElement | null>(null);
 
-  let lastContent = $state('');
-  let pollInterval: ReturnType<typeof setInterval>;
-  let currentPath: string | null = null;
-  let totalLines = $state(1);
-  let scrollRaf: number | null = null;
+let lastContent = $state('');
+let pollInterval: ReturnType<typeof setInterval>;
+let currentPath: string | null = null;
+let totalLines = $state(1);
+let scrollRaf: number | null = null;
 
-  function getTotalLines(content: string) {
-    return content.split('\n').length;
-  }
+function getTotalLines(content: string) {
+	return content.split('\n').length;
+}
 
-  function scrollPreviewToLine(line: number) {
-    if (!previewEl || totalLines <= 1) return;
-    const ratio = (line - 1) / (totalLines - 1);
-    const target = ratio * previewEl.scrollHeight - previewEl.clientHeight / 2;
-    const clamped = Math.max(0, Math.min(previewEl.scrollHeight - previewEl.clientHeight, target));
+function scrollPreviewToLine(line: number) {
+	if (!previewEl || totalLines <= 1) return;
+	const ratio = (line - 1) / (totalLines - 1);
+	const target = ratio * previewEl.scrollHeight - previewEl.clientHeight / 2;
+	const clamped = Math.max(
+		0,
+		Math.min(previewEl.scrollHeight - previewEl.clientHeight, target),
+	);
 
-    if (scrollRaf) cancelAnimationFrame(scrollRaf);
-    scrollRaf = requestAnimationFrame(() => {
-      if (previewEl) previewEl.scrollTo({ top: clamped, behavior: 'smooth' });
-      scrollRaf = null;
-    });
-  }
+	if (scrollRaf) cancelAnimationFrame(scrollRaf);
+	scrollRaf = requestAnimationFrame(() => {
+		if (previewEl) previewEl.scrollTo({ top: clamped, behavior: 'smooth' });
+		scrollRaf = null;
+	});
+}
 
-  async function render() {
-    if (!appState.system || !appState.openFilePath) return;
-    try {
-      const content = await fileRead(appState.openFilePath);
-      lastContent = content;
-      totalLines = getTotalLines(content);
-      const fm = parseFrontmatter(content);
-      tags = fm.tags;
-      renderedHtml = renderMarkdown(content);
+async function render() {
+	if (!appState.system || !appState.openFilePath) return;
+	try {
+		const content = await fileRead(appState.openFilePath);
+		lastContent = content;
+		totalLines = getTotalLines(content);
+		const fm = parseFrontmatter(content);
+		tags = fm.tags;
+		renderedHtml = renderMarkdown(content);
 
-      const noteName = appState.openFilePath.split('/').pop()?.replace('.md', '') || '';
-      backlinks = await getBacklinks(appState.system.path, noteName);
-    } catch (e) {
-      renderedHtml = `<pre style="color:#cc4444">${String(e)}</pre>`;
-    }
-  }
+		const noteName =
+			appState.openFilePath.split('/').pop()?.replace('.md', '') || '';
+		backlinks = await getBacklinks(appState.system.path, noteName);
+	} catch (e) {
+		renderedHtml = `<pre style="color:#cc4444">${String(e)}</pre>`;
+	}
+}
 
-  async function checkForChanges() {
-    if (!appState.openFilePath) return;
-    try {
-      const content = await fileRead(appState.openFilePath);
-      if (content !== lastContent) {
-        lastContent = content;
-        totalLines = getTotalLines(content);
-        const fm = parseFrontmatter(content);
-        tags = fm.tags;
-        renderedHtml = renderMarkdown(content);
-      }
-    } catch {
-      // ignore
-    }
-  }
+async function checkForChanges() {
+	if (!appState.openFilePath) return;
+	try {
+		const content = await fileRead(appState.openFilePath);
+		if (content !== lastContent) {
+			lastContent = content;
+			totalLines = getTotalLines(content);
+			const fm = parseFrontmatter(content);
+			tags = fm.tags;
+			renderedHtml = renderMarkdown(content);
+		}
+	} catch {
+		// ignore
+	}
+}
 
-  $effect(() => {
-    const path = appState.openFilePath;
-    if (path && path !== currentPath) {
-      currentPath = path;
-      lastContent = '';
-      totalLines = 1;
-      renderedHtml = '';
-      tags = [];
-      backlinks = [];
-      appState.cursorLineActive = false;
-      if (previewEl) previewEl.scrollTop = 0;
-      render();
-    }
-  });
+$effect(() => {
+	const path = appState.openFilePath;
+	if (path && path !== currentPath) {
+		currentPath = path;
+		lastContent = '';
+		totalLines = 1;
+		renderedHtml = '';
+		tags = [];
+		backlinks = [];
+		appState.cursorLineActive = false;
+		if (previewEl) previewEl.scrollTop = 0;
+		render();
+	}
+});
 
-  $effect(() => {
-    const line = appState.cursorLine;
-    if (appState.cursorLineActive && previewEl && totalLines > 1) {
-      scrollPreviewToLine(line);
-    }
-  });
+$effect(() => {
+	const line = appState.cursorLine;
+	if (appState.cursorLineActive && previewEl && totalLines > 1) {
+		scrollPreviewToLine(line);
+	}
+});
 
-  onMount(() => {
-    if (appState.openFilePath) {
-      currentPath = appState.openFilePath;
-      render();
-    }
-    pollInterval = setInterval(checkForChanges, 500);
-    return () => clearInterval(pollInterval);
-  });
+onMount(() => {
+	if (appState.openFilePath) {
+		currentPath = appState.openFilePath;
+		render();
+	}
+	pollInterval = setInterval(checkForChanges, 500);
+	return () => clearInterval(pollInterval);
+});
 
-  async function onPreviewClick(e: MouseEvent) {
-    const target = e.target as Element;
-    const link = target.closest('a');
-    if (!link || !appState.system) return;
+async function onPreviewClick(e: MouseEvent) {
+	const target = e.target as Element;
+	const link = target.closest('a');
+	if (!link || !appState.system) return;
 
-    const href = link.getAttribute('href') || '';
-    if (href.startsWith('wiki://')) {
-      e.preventDefault();
-      const noteName = decodeURIComponent(href.slice(7));
-      const notePath = await findNote(appState.system.path, noteName);
-      if (notePath) {
-        const content = await fileRead(notePath);
-        openFile(notePath, content);
-      }
-    }
-  }
+	const href = link.getAttribute('href') || '';
+	if (href.startsWith('wiki://')) {
+		e.preventDefault();
+		const noteName = decodeURIComponent(href.slice(7));
+		const notePath = await findNote(appState.system.path, noteName);
+		if (notePath) {
+			const content = await fileRead(notePath);
+			openFile(notePath, content);
+		}
+	}
+}
 </script>
 
 <div class="editor-wrap">

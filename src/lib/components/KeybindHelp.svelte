@@ -1,34 +1,34 @@
 <script lang="ts">
-  import { Dialog, Button } from '$lib/components/ui';
+import { Button, Dialog } from '$lib/components/ui';
 
-  interface Props {
-    onClose: () => void;
-  }
+interface Props {
+	onClose: () => void;
+}
 
-  let { onClose }: Props = $props();
-  let open = $state(true);
+let { onClose }: Props = $props();
+let open = $state(true);
 
-  $effect(() => {
-    if (!open) {
-      onClose();
-    }
-  });
+$effect(() => {
+	if (!open) {
+		onClose();
+	}
+});
 
-  const shortcuts = [
-    { key: '⌘P', action: 'Find or create note' },
-    { key: '⌘⇧P', action: 'Semantic search' },
-    { key: '⌘N', action: 'New note' },
-    { key: '⌘G', action: 'Toggle graph view' },
-    { key: '⌘⇧G', action: 'Toggle ghost links' },
-    { key: '⌘[', action: 'Go back in history' },
-    { key: '⌘]', action: 'Go forward in history' },
-    { key: '⌘= / ⌘-', action: 'Zoom in / out' },
-    { key: '⌘0', action: 'Reset zoom' },
-    { key: '⌘,', action: 'Open settings' },
-    { key: '?', action: 'Show this help' },
-    { key: 'Esc', action: 'Close any overlay' },
-    { key: 'Delete (x2)', action: 'Trash current note' },
-  ];
+const shortcuts = [
+	{ key: '⌘P', action: 'Find or create note' },
+	{ key: '⌘⇧P', action: 'Semantic search' },
+	{ key: '⌘N', action: 'New note' },
+	{ key: '⌘G', action: 'Toggle graph view' },
+	{ key: '⌘⇧G', action: 'Toggle ghost links' },
+	{ key: '⌘[', action: 'Go back in history' },
+	{ key: '⌘]', action: 'Go forward in history' },
+	{ key: '⌘= / ⌘-', action: 'Zoom in / out' },
+	{ key: '⌘0', action: 'Reset zoom' },
+	{ key: '⌘,', action: 'Open settings' },
+	{ key: '?', action: 'Show this help' },
+	{ key: 'Esc', action: 'Close any overlay' },
+	{ key: 'Delete (x2)', action: 'Trash current note' },
+];
 </script>
 
 <Dialog bind:open title="Keyboard Shortcuts" contentClass="help-dialog">

@@ -1,40 +1,46 @@
 <script lang="ts">
-  import { Button } from "bits-ui";
-  import type { Snippet } from "svelte";
-  import { cn } from "$lib/utils";
+import type { Button } from 'bits-ui';
+import type { Snippet } from 'svelte';
+import { cn } from '$lib/utils';
 
-  type Variant = "default" | "primary" | "secondary" | "ghost" | "destructive" | "outline";
-  type Size = "default" | "sm" | "lg" | "icon";
+type Variant =
+	| 'default'
+	| 'primary'
+	| 'secondary'
+	| 'ghost'
+	| 'destructive'
+	| 'outline';
+type Size = 'default' | 'sm' | 'lg' | 'icon';
 
-  interface Props extends Button.RootProps {
-    variant?: Variant;
-    size?: Size;
-    children?: Snippet;
-  }
+interface Props extends Button.RootProps {
+	variant?: Variant;
+	size?: Size;
+	children?: Snippet;
+}
 
-  let {
-    variant = "default",
-    size = "default",
-    class: className,
-    children,
-    ...rest
-  }: Props = $props();
+let {
+	variant = 'default',
+	size = 'default',
+	class: className,
+	children,
+	...rest
+}: Props = $props();
 
-  const variantClasses: Record<Variant, string> = {
-    default: "btn-default",
-    primary: "btn-primary",
-    secondary: "btn-secondary",
-    ghost: "btn-ghost",
-    destructive: "btn-destructive",
-    outline: "btn-outline",
-  };
+const variantClasses: Record<Variant, string> = {
+	default: 'btn-default',
+	primary: 'btn-primary',
+	secondary: 'btn-secondary',
+	ghost: 'btn-ghost',
+	destructive: 'btn-destructive',
+	outline: 'btn-outline',
+};
 
-  const sizeClasses: Record<Size, string> = {
-    default: "btn-size-default",
-    sm: "btn-size-sm",
-    lg: "btn-size-lg",
-    icon: "btn-size-icon",
-  };
+const sizeClasses: Record<Size, string> = {
+	default: 'btn-size-default',
+	sm: 'btn-size-sm',
+	lg: 'btn-size-lg',
+	icon: 'btn-size-icon',
+};
 </script>
 
 <Button.Root

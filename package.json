@@ -8,9 +8,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "release": "bun run scripts/bump-version.ts"
+    "release": "bun run scripts/bump-version.ts",
+    "check": "biome check .",
+    "format": "biome format --write ."
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "@sveltejs/adapter-static": "^3.0.8",
     "@sveltejs/kit": "^2.20.7",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",

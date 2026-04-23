@@ -1,39 +1,39 @@
 <script lang="ts">
-  import { Dialog } from "bits-ui";
-  import type { Snippet } from "svelte";
-  import { cn } from "$lib/utils";
-  import { X } from "lucide-svelte";
+import { Dialog } from 'bits-ui';
+import { X } from 'lucide-svelte';
+import type { Snippet } from 'svelte';
+import { cn } from '$lib/utils';
 
-  interface Props {
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    title?: string;
-    description?: string;
-    children?: Snippet;
-    class?: string;
-    contentClass?: string;
-    showClose?: boolean;
-    position?: "center" | "top";
-    preventScroll?: boolean;
-  }
+interface Props {
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
+	title?: string;
+	description?: string;
+	children?: Snippet;
+	class?: string;
+	contentClass?: string;
+	showClose?: boolean;
+	position?: 'center' | 'top';
+	preventScroll?: boolean;
+}
 
-  let {
-    open = $bindable(false),
-    onOpenChange,
-    title,
-    description,
-    children,
-    class: className,
-    contentClass,
-    showClose = true,
-    position = "center",
-    preventScroll = true,
-  }: Props = $props();
+let {
+	open = $bindable(false),
+	onOpenChange,
+	title,
+	description,
+	children,
+	class: className,
+	contentClass,
+	showClose = true,
+	position = 'center',
+	preventScroll = true,
+}: Props = $props();
 
-  function handleOpenChange(newOpen: boolean) {
-    open = newOpen;
-    onOpenChange?.(newOpen);
-  }
+function handleOpenChange(newOpen: boolean) {
+	open = newOpen;
+	onOpenChange?.(newOpen);
+}
 </script>
 
 <Dialog.Root bind:open={open} onOpenChange={handleOpenChange}>

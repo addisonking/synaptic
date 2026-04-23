@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { ScrollArea } from "bits-ui";
-  import type { Snippet } from "svelte";
-  import { cn } from "$lib/utils";
+import { ScrollArea } from 'bits-ui';
+import type { Snippet } from 'svelte';
+import { cn } from '$lib/utils';
 
-  interface Props {
-    children: Snippet;
-    class?: string;
-    orientation?: "both" | "vertical" | "horizontal";
-  }
+interface Props {
+	children: Snippet;
+	class?: string;
+	orientation?: 'both' | 'vertical' | 'horizontal';
+}
 
-  let { children, class: className, orientation = "vertical" }: Props = $props();
+let { children, class: className, orientation = 'vertical' }: Props = $props();
 </script>
 
 <ScrollArea.Root class={cn("scroll-root", className)}>

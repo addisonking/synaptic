@@ -1,23 +1,23 @@
 <script lang="ts">
-  import { Tabs } from "bits-ui";
-  import type { Snippet } from "svelte";
-  import { cn } from "$lib/utils";
+import { Tabs } from 'bits-ui';
+import type { Snippet } from 'svelte';
+import { cn } from '$lib/utils';
 
-  interface Props {
-    value?: string;
-    onValueChange?: (value: string) => void;
-    items: { value: string; label: string }[];
-    children?: Snippet;
-    class?: string;
-  }
+interface Props {
+	value?: string;
+	onValueChange?: (value: string) => void;
+	items: { value: string; label: string }[];
+	children?: Snippet;
+	class?: string;
+}
 
-  let {
-    value = $bindable(),
-    onValueChange,
-    items,
-    children,
-    class: className,
-  }: Props = $props();
+let {
+	value = $bindable(),
+	onValueChange,
+	items,
+	children,
+	class: className,
+}: Props = $props();
 </script>
 
 <Tabs.Root bind:value {onValueChange} class={cn("tabs-root", className)}>

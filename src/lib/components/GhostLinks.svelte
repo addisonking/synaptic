@@ -1,169 +1,179 @@
 <script lang="ts">
-  import { appState } from '$lib/store.svelte';
-  import { scanGhostLinks, previewGhostNoteStream, createGhostNotes, fileRead } from '$lib/api';
-  import type { GhostLink, GhostNotePreview, GhostSource } from '$lib/types';
-  import { X, Sparkles, Check, XCircle, RotateCcw } from 'lucide-svelte';
-  import { Channel } from '@tauri-apps/api/core';
-  import { Dialog, Button, Separator } from '$lib/components/ui';
+import { Channel } from '@tauri-apps/api/core';
+import { Check, RotateCcw, Sparkles, X, XCircle } from 'lucide-svelte';
+import {
+	createGhostNotes,
+	fileRead,
+	previewGhostNoteStream,
+	scanGhostLinks,
+} from '$lib/api';
+import { Button, Dialog, Separator } from '$lib/components/ui';
+import { appState } from '$lib/store.svelte';
+import type { GhostLink, GhostNotePreview, GhostSource } from '$lib/types';
 
-  interface Props {
-    onClose: () => void;
-  }
+interface Props {
+	onClose: () => void;
+}
 
-  let { onClose }: Props = $props();
-  let open = $state(true);
+let { onClose }: Props = $props();
+let open = $state(true);
 
-  let ghosts = $state<GhostLink[]>([]);
-  let selectedIdx = $state(0);
-  let isScanning = $state(false);
-  let scanError = $state<string | null>(null);
+let ghosts = $state<GhostLink[]>([]);
+let selectedIdx = $state(0);
+let isScanning = $state(false);
+let scanError = $state<string | null>(null);
 
-  let previews = $state<Record<string, string>>({});
-  let generating = $state<Record<string, boolean>>({});
-  let generatingStatus = $state<Record<string, string>>({});
-  let statuses = $state<Record<string, 'pending' | 'approved' | 'rejected'>>({});
-  let genErrors = $state<Record<string, string>>({});
+let previews = $state<Record<string, string>>({});
+let generating = $state<Record<string, boolean>>({});
+let generatingStatus = $state<Record<string, string>>({});
+let statuses = $state<Record<string, 'pending' | 'approved' | 'rejected'>>({});
+let genErrors = $state<Record<string, string>>({});
 
-  let isCreating = $state(false);
-  let createError = $state<string | null>(null);
+let isCreating = $state(false);
+let createError = $state<string | null>(null);
 
-  $effect(() => {
-    if (!open) {
-      onClose();
-    }
-  });
+$effect(() => {
+	if (!open) {
+		onClose();
+	}
+});
 
-  async function doScan() {
-    if (!appState.system) return;
-    isScanning = true;
-    scanError = null;
-    try {
-      const result = await scanGhostLinks(appState.system.path);
-      ghosts = result;
-      selectedIdx = 0;
-      previews = {};
-      generating = {};
-      statuses = {};
-      genErrors = {};
-      appState.ghostLinkCount = result.length;
-    } catch (e) {
-      scanError = String(e);
-    } finally {
-      isScanning = false;
-    }
-  }
+async function doScan() {
+	if (!appState.system) return;
+	isScanning = true;
+	scanError = null;
+	try {
+		const result = await scanGhostLinks(appState.system.path);
+		ghosts = result;
+		selectedIdx = 0;
+		previews = {};
+		generating = {};
+		statuses = {};
+		genErrors = {};
+		appState.ghostLinkCount = result.length;
+	} catch (e) {
+		scanError = String(e);
+	} finally {
+		isScanning = false;
+	}
+}
 
-  async function doGenerate(target: string, sources: GhostSource[]) {
-    if (!appState.system) return;
-    generating[target] = true;
-    genErrors[target] = '';
-    previews[target] = '';
-    generatingStatus[target] = 'Starting...';
-    try {
-      const channel = new Channel<{ kind: string; data: string }>();
-      channel.onmessage = (msg) => {
-        if (msg.kind === 'status') {
-          generatingStatus[target] = msg.data;
-        } else if (msg.kind === 'chunk') {
-          previews[target] += msg.data;
-        } else if (msg.kind === 'done') {
-          generating[target] = false;
-          generatingStatus[target] = '';
-          statuses[target] = 'pending';
-        } else if (msg.kind === 'error') {
-          genErrors[target] = msg.data;
-          generating[target] = false;
-          generatingStatus[target] = '';
-        }
-      };
-      await previewGhostNoteStream(appState.system.path, target, sources, channel);
-    } catch (e) {
-      genErrors[target] = String(e);
-      generating[target] = false;
-      generatingStatus[target] = '';
-    }
-  }
+async function doGenerate(target: string, sources: GhostSource[]) {
+	if (!appState.system) return;
+	generating[target] = true;
+	genErrors[target] = '';
+	previews[target] = '';
+	generatingStatus[target] = 'Starting...';
+	try {
+		const channel = new Channel<{ kind: string; data: string }>();
+		channel.onmessage = (msg) => {
+			if (msg.kind === 'status') {
+				generatingStatus[target] = msg.data;
+			} else if (msg.kind === 'chunk') {
+				previews[target] += msg.data;
+			} else if (msg.kind === 'done') {
+				generating[target] = false;
+				generatingStatus[target] = '';
+				statuses[target] = 'pending';
+			} else if (msg.kind === 'error') {
+				genErrors[target] = msg.data;
+				generating[target] = false;
+				generatingStatus[target] = '';
+			}
+		};
+		await previewGhostNoteStream(
+			appState.system.path,
+			target,
+			sources,
+			channel,
+		);
+	} catch (e) {
+		genErrors[target] = String(e);
+		generating[target] = false;
+		generatingStatus[target] = '';
+	}
+}
 
-  function approve(target: string) {
-    statuses[target] = 'approved';
-  }
+function approve(target: string) {
+	statuses[target] = 'approved';
+}
 
-  function reject(target: string) {
-    statuses[target] = 'rejected';
-  }
+function reject(target: string) {
+	statuses[target] = 'rejected';
+}
 
-  async function doCreate() {
-    if (!appState.system) return;
-    const approved: GhostNotePreview[] = [];
-    for (const g of ghosts) {
-      if (statuses[g.target] === 'approved' && previews[g.target]) {
-        approved.push({ target: g.target, content: previews[g.target] });
-      }
-    }
-    if (approved.length === 0) return;
-    isCreating = true;
-    createError = null;
-    try {
-      await createGhostNotes(appState.system.path, approved);
-      ghosts = ghosts.filter((g) => statuses[g.target] !== 'approved');
-      appState.ghostLinkCount = ghosts.length;
-      selectedIdx = Math.min(selectedIdx, ghosts.length - 1);
-    } catch (e) {
-      createError = String(e);
-    } finally {
-      isCreating = false;
-    }
-  }
+async function doCreate() {
+	if (!appState.system) return;
+	const approved: GhostNotePreview[] = [];
+	for (const g of ghosts) {
+		if (statuses[g.target] === 'approved' && previews[g.target]) {
+			approved.push({ target: g.target, content: previews[g.target] });
+		}
+	}
+	if (approved.length === 0) return;
+	isCreating = true;
+	createError = null;
+	try {
+		await createGhostNotes(appState.system.path, approved);
+		ghosts = ghosts.filter((g) => statuses[g.target] !== 'approved');
+		appState.ghostLinkCount = ghosts.length;
+		selectedIdx = Math.min(selectedIdx, ghosts.length - 1);
+	} catch (e) {
+		createError = String(e);
+	} finally {
+		isCreating = false;
+	}
+}
 
-  function approveAll() {
-    for (const g of ghosts) {
-      if (previews[g.target]) {
-        statuses[g.target] = 'approved';
-      }
-    }
-  }
+function approveAll() {
+	for (const g of ghosts) {
+		if (previews[g.target]) {
+			statuses[g.target] = 'approved';
+		}
+	}
+}
 
-  function rejectAll() {
-    for (const g of ghosts) {
-      statuses[g.target] = 'rejected';
-    }
-  }
+function rejectAll() {
+	for (const g of ghosts) {
+		statuses[g.target] = 'rejected';
+	}
+}
 
-  function statusColor(target: string): string {
-    const s = statuses[target];
-    if (s === 'approved') return '#44cc44';
-    if (s === 'rejected') return '#cc4444';
-    if (previews[target]) return '#4444cc';
-    return '#666666';
-  }
+function statusColor(target: string): string {
+	const s = statuses[target];
+	if (s === 'approved') return '#44cc44';
+	if (s === 'rejected') return '#cc4444';
+	if (previews[target]) return '#4444cc';
+	return '#666666';
+}
 
-  function approvedCount(): number {
-    return ghosts.filter((g) => statuses[g.target] === 'approved').length;
-  }
+function approvedCount(): number {
+	return ghosts.filter((g) => statuses[g.target] === 'approved').length;
+}
 
-  function collectTags(sources: GhostSource[]): string[] {
-    const seen = new Set<string>();
-    const result: string[] = [];
-    for (const src of sources) {
-      for (const tag of src.tags) {
-        if (!seen.has(tag)) {
-          seen.add(tag);
-          result.push(tag);
-        }
-      }
-    }
-    return result;
-  }
+function collectTags(sources: GhostSource[]): string[] {
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const src of sources) {
+		for (const tag of src.tags) {
+			if (!seen.has(tag)) {
+				seen.add(tag);
+				result.push(tag);
+			}
+		}
+	}
+	return result;
+}
 
-  $effect(() => {
-    doScan();
-  });
+$effect(() => {
+	doScan();
+});
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      open = false;
-    }
-  }
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === 'Escape') {
+		open = false;
+	}
+}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

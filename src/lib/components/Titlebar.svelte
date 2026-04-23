@@ -1,26 +1,27 @@
 <script lang="ts">
-  import { appState, goBack, goForward } from '$lib/store.svelte';
-  import { fileDelete } from '$lib/api';
-  interface Props {
-    onFindOrCreate: () => void;
-    onNewNote: () => void;
-    onBlurTerminal?: () => void;
-  }
+import { fileDelete } from '$lib/api';
+import { appState, goBack, goForward } from '$lib/store.svelte';
 
-  let { onFindOrCreate, onNewNote, onBlurTerminal }: Props = $props();
-  let deleteClicks = $state(0);
+interface Props {
+	onFindOrCreate: () => void;
+	onNewNote: () => void;
+	onBlurTerminal?: () => void;
+}
 
-  async function handleDelete() {
-    if (!appState.openFilePath) return;
-    deleteClicks++;
-    if (deleteClicks >= 2) {
-      await fileDelete(appState.openFilePath);
-      appState.openFilePath = null;
-      appState.openFileContent = '';
-      deleteClicks = 0;
-    }
-    setTimeout(() => deleteClicks = 0, 2000);
-  }
+let { onFindOrCreate, onNewNote, onBlurTerminal }: Props = $props();
+let deleteClicks = $state(0);
+
+async function handleDelete() {
+	if (!appState.openFilePath) return;
+	deleteClicks++;
+	if (deleteClicks >= 2) {
+		await fileDelete(appState.openFilePath);
+		appState.openFilePath = null;
+		appState.openFileContent = '';
+		deleteClicks = 0;
+	}
+	setTimeout(() => (deleteClicks = 0), 2000);
+}
 </script>
 
 <div class="titlebar">

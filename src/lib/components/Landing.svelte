@@ -1,46 +1,46 @@
 <script lang="ts">
-  import { open } from '@tauri-apps/plugin-dialog';
-  import type { SystemInfo } from '$lib/types';
-  import { Dialog, Button, Input } from '$lib/components/ui';
+import { open } from '@tauri-apps/plugin-dialog';
+import { Button, Dialog, Input } from '$lib/components/ui';
+import type { SystemInfo } from '$lib/types';
 
-  interface Props {
-    recents: SystemInfo[];
-    onOpenVault: (path: string) => void;
-    onCreateVault: (parent: string, name: string) => void;
-  }
+interface Props {
+	recents: SystemInfo[];
+	onOpenVault: (path: string) => void;
+	onCreateVault: (parent: string, name: string) => void;
+}
 
-  let { recents, onOpenVault, onCreateVault }: Props = $props();
-  let createName = $state('');
-  let createParent = $state('');
-  let showCreate = $state(false);
-  let createError = $state('');
+let { recents, onOpenVault, onCreateVault }: Props = $props();
+let createName = $state('');
+let createParent = $state('');
+let showCreate = $state(false);
+let createError = $state('');
 
-  async function handleOpenExisting() {
-    const selected = await open({ directory: true });
-    if (selected && typeof selected === 'string') {
-      onOpenVault(selected);
-    }
-  }
+async function handleOpenExisting() {
+	const selected = await open({ directory: true });
+	if (selected && typeof selected === 'string') {
+		onOpenVault(selected);
+	}
+}
 
-  async function handleCreateSubmit() {
-    if (!createName.trim() || !createParent.trim()) return;
-    createError = '';
-    try {
-      await onCreateVault(createParent, createName.trim());
-      createName = '';
-      createParent = '';
-      showCreate = false;
-    } catch (e: any) {
-      createError = e?.message || String(e);
-    }
-  }
+async function handleCreateSubmit() {
+	if (!createName.trim() || !createParent.trim()) return;
+	createError = '';
+	try {
+		await onCreateVault(createParent, createName.trim());
+		createName = '';
+		createParent = '';
+		showCreate = false;
+	} catch (e) {
+		createError = e instanceof Error ? e.message : String(e);
+	}
+}
 
-  async function pickCreateParent() {
-    const selected = await open({ directory: true });
-    if (selected && typeof selected === 'string') {
-      createParent = selected;
-    }
-  }
+async function pickCreateParent() {
+	const selected = await open({ directory: true });
+	if (selected && typeof selected === 'string') {
+		createParent = selected;
+	}
+}
 </script>
 
 <div class="landing">

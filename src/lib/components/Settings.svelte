@@ -1,76 +1,81 @@
 <script lang="ts">
-  import { getSettings, setSettings, semanticIndexRebuild, testOllamaConnection } from '$lib/api';
-  import { appState } from '$lib/store.svelte';
-  import type { AppSettings, OllamaHealth } from '$lib/types';
-  import { X, Check } from 'lucide-svelte';
-  import { Dialog, Tabs, Button, Input } from '$lib/components/ui';
+import { Check, X } from 'lucide-svelte';
+import {
+	getSettings,
+	semanticIndexRebuild,
+	setSettings,
+	testOllamaConnection,
+} from '$lib/api';
+import { Button, Dialog, Input, Tabs } from '$lib/components/ui';
+import { appState } from '$lib/store.svelte';
+import type { AppSettings, OllamaHealth } from '$lib/types';
 
-  interface Props {
-    onClose: () => void;
-  }
+interface Props {
+	onClose: () => void;
+}
 
-  let { onClose }: Props = $props();
-  let open = $state(true);
-  let activeTab = $state('general');
-  let settings = $state<AppSettings>({});
-  let saveStatus = $state<'saved' | 'saving' | 'error'>('saved');
-  let rebuildStatus = $state<'idle' | 'building' | 'done' | 'error'>('idle');
-  let rebuildError = $state<string | null>(null);
-  let testStatus = $state<'idle' | 'testing' | OllamaHealth['message']>('idle');
-  let testOk = $state<boolean | null>(null);
+let { onClose }: Props = $props();
+let open = $state(true);
+let activeTab = $state('general');
+let settings = $state<AppSettings>({});
+let saveStatus = $state<'saved' | 'saving' | 'error'>('saved');
+let rebuildStatus = $state<'idle' | 'building' | 'done' | 'error'>('idle');
+let rebuildError = $state<string | null>(null);
+let testStatus = $state<'idle' | 'testing' | OllamaHealth['message']>('idle');
+let testOk = $state<boolean | null>(null);
 
-  $effect(() => {
-    if (!open) {
-      onClose();
-    }
-  });
+$effect(() => {
+	if (!open) {
+		onClose();
+	}
+});
 
-  $effect(() => {
-    getSettings().then((s) => {
-      settings = { ...s };
-    });
-  });
+$effect(() => {
+	getSettings().then((s) => {
+		settings = { ...s };
+	});
+});
 
-  async function saveSettings() {
-    saveStatus = 'saving';
-    try {
-      await setSettings(settings);
-      saveStatus = 'saved';
-    } catch {
-      saveStatus = 'error';
-    }
-  }
+async function saveSettings() {
+	saveStatus = 'saving';
+	try {
+		await setSettings(settings);
+		saveStatus = 'saved';
+	} catch {
+		saveStatus = 'error';
+	}
+}
 
-  async function handleRebuild() {
-    if (!appState.system) return;
-    rebuildStatus = 'building';
-    rebuildError = null;
-    try {
-      await semanticIndexRebuild(appState.system.path);
-      rebuildStatus = 'done';
-    } catch (e) {
-      rebuildStatus = 'error';
-      rebuildError = String(e);
-    }
-  }
+async function handleRebuild() {
+	if (!appState.system) return;
+	rebuildStatus = 'building';
+	rebuildError = null;
+	try {
+		await semanticIndexRebuild(appState.system.path);
+		rebuildStatus = 'done';
+	} catch (e) {
+		rebuildStatus = 'error';
+		rebuildError = String(e);
+	}
+}
 
-  async function handleTestConnection() {
-    testStatus = 'testing';
-    testOk = null;
-    try {
-      const health = await testOllamaConnection();
-      testStatus = health.message;
-      testOk = health.reachable && health.model_available;
-    } catch (e) {
-      testStatus = String(e);
-      testOk = false;
-    }
-  }
+async function handleTestConnection() {
+	testStatus = 'testing';
+	testOk = null;
+	try {
+		const health = await testOllamaConnection();
+		testStatus = health.message;
+		testOk = health.reachable && health.model_available;
+	} catch (e) {
+		testStatus = String(e);
+		testOk = false;
+	}
+}
 
-  const tabItems = [
-    { value: 'general', label: 'General' },
-    { value: 'ai', label: 'AI / Search' },
-  ];
+const tabItems = [
+	{ value: 'general', label: 'General' },
+	{ value: 'ai', label: 'AI / Search' },
+];
 </script>
 
 <Dialog bind:open title="Settings" contentClass="settings-dialog">

@@ -1,172 +1,198 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { appState, loadZoom, goBack, goForward } from '$lib/store.svelte';
-  import { systemOpen, systemListRecent, fileRead, vaultGetConfig, vaultCreate, scanGhostLinks } from '$lib/api';
-  import Landing from '$lib/components/Landing.svelte';
-  import Titlebar from '$lib/components/Titlebar.svelte';
-  import Editor from '$lib/components/Editor.svelte';
-  import NvimTerminal from '$lib/components/NvimTerminal.svelte';
-  import FindOrCreate from '$lib/components/FindOrCreate.svelte';
-  import NewNote from '$lib/components/NewNote.svelte';
-  import KeybindHelp from '$lib/components/KeybindHelp.svelte';
-  import Graph from '$lib/components/Graph.svelte';
-  import Settings from '$lib/components/Settings.svelte';
-  import SemanticSearch from '$lib/components/SemanticSearch.svelte';
-  import GhostLinks from '$lib/components/GhostLinks.svelte';
-  import { openFile } from '$lib/store.svelte';
+import { onMount } from 'svelte';
+import {
+	fileRead,
+	scanGhostLinks,
+	systemListRecent,
+	systemOpen,
+	vaultCreate,
+	vaultGetConfig,
+} from '$lib/api';
+import Editor from '$lib/components/Editor.svelte';
+import FindOrCreate from '$lib/components/FindOrCreate.svelte';
+import GhostLinks from '$lib/components/GhostLinks.svelte';
+import Graph from '$lib/components/Graph.svelte';
+import KeybindHelp from '$lib/components/KeybindHelp.svelte';
+import Landing from '$lib/components/Landing.svelte';
+import NewNote from '$lib/components/NewNote.svelte';
+import NvimTerminal from '$lib/components/NvimTerminal.svelte';
+import SemanticSearch from '$lib/components/SemanticSearch.svelte';
+import Settings from '$lib/components/Settings.svelte';
+import Titlebar from '$lib/components/Titlebar.svelte';
+import {
+	appState,
+	goBack,
+	goForward,
+	loadZoom,
+	openFile,
+} from '$lib/store.svelte';
 
-  let showFindOrCreate = $state(false);
-  let showNewNote = $state(false);
-  let showSemanticSearch = $state(false);
-  let showGhostLinks = $state(false);
-  let newNoteName = $state('');
-  let ptyId = $state(0);
-  let nvimTerminalRef: { blur(): void; focus(): void } | undefined = $state();
+let showFindOrCreate = $state(false);
+let showNewNote = $state(false);
+let showSemanticSearch = $state(false);
+let showGhostLinks = $state(false);
+let newNoteName = $state('');
+let ptyId = $state(0);
+let nvimTerminalRef: { blur(): void; focus(): void } | undefined = $state();
 
-  function blurTerminal() {
-    nvimTerminalRef?.blur();
-  }
+function blurTerminal() {
+	nvimTerminalRef?.blur();
+}
 
-  onMount(() => {
-    loadZoom();
-    systemListRecent().then((recents) => {
-      appState.recentSystems = recents;
-    });
+onMount(() => {
+	loadZoom();
+	systemListRecent().then((recents) => {
+		appState.recentSystems = recents;
+	});
 
-    const handleKeydown = (e: KeyboardEvent) => {
-      // Disable global shortcuts when no vault is open (landing screen)
-      if (!appState.system) return;
+	const handleKeydown = (e: KeyboardEvent) => {
+		// Disable global shortcuts when no vault is open (landing screen)
+		if (!appState.system) return;
 
-      // Always handle Cmd/Ctrl shortcuts even when terminal/input is focused
-      if (e.metaKey || e.ctrlKey) {
-        if (e.key === 'p' && !e.shiftKey) {
-          e.preventDefault();
-          blurTerminal();
-          showFindOrCreate = true;
-          return;
-        }
-        if (e.key === 'P' || (e.key === 'p' && e.shiftKey)) {
-          e.preventDefault();
-          blurTerminal();
-          showSemanticSearch = true;
-          return;
-        }
-        if (e.key === 'n') {
-          e.preventDefault();
-          blurTerminal();
-          showNewNote = true;
-          return;
-        }
-        if (e.key === 'g') {
-          e.preventDefault();
-          blurTerminal();
-          appState.showGraph = !appState.showGraph;
-          return;
-        }
-        if (e.key === 'G' || (e.key === 'g' && e.shiftKey)) {
-          e.preventDefault();
-          blurTerminal();
-          appState.showGhostLinks = !appState.showGhostLinks;
-          return;
-        }
-        if (e.key === '[') {
-          e.preventDefault();
-          goBack();
-          return;
-        }
-        if (e.key === ']') {
-          e.preventDefault();
-          goForward();
-          return;
-        }
-        if (e.key === '=' || e.key === '+') {
-          e.preventDefault();
-          appState.zoom = Math.min(200, appState.zoom + 10);
-          return;
-        }
-        if (e.key === '-') {
-          e.preventDefault();
-          appState.zoom = Math.max(50, appState.zoom - 10);
-          return;
-        }
-        if (e.key === '0') {
-          e.preventDefault();
-          appState.zoom = 100;
-          return;
-        }
-        if (e.key === ',') {
-          e.preventDefault();
-          blurTerminal();
-          appState.showSettings = true;
-          return;
-        }
-      }
+		// Always handle Cmd/Ctrl shortcuts even when terminal/input is focused
+		if (e.metaKey || e.ctrlKey) {
+			if (e.key === 'p' && !e.shiftKey) {
+				e.preventDefault();
+				blurTerminal();
+				showFindOrCreate = true;
+				return;
+			}
+			if (e.key === 'P' || (e.key === 'p' && e.shiftKey)) {
+				e.preventDefault();
+				blurTerminal();
+				showSemanticSearch = true;
+				return;
+			}
+			if (e.key === 'n') {
+				e.preventDefault();
+				blurTerminal();
+				showNewNote = true;
+				return;
+			}
+			if (e.key === 'g') {
+				e.preventDefault();
+				blurTerminal();
+				appState.showGraph = !appState.showGraph;
+				return;
+			}
+			if (e.key === 'G' || (e.key === 'g' && e.shiftKey)) {
+				e.preventDefault();
+				blurTerminal();
+				appState.showGhostLinks = !appState.showGhostLinks;
+				return;
+			}
+			if (e.key === '[') {
+				e.preventDefault();
+				goBack();
+				return;
+			}
+			if (e.key === ']') {
+				e.preventDefault();
+				goForward();
+				return;
+			}
+			if (e.key === '=' || e.key === '+') {
+				e.preventDefault();
+				appState.zoom = Math.min(200, appState.zoom + 10);
+				return;
+			}
+			if (e.key === '-') {
+				e.preventDefault();
+				appState.zoom = Math.max(50, appState.zoom - 10);
+				return;
+			}
+			if (e.key === '0') {
+				e.preventDefault();
+				appState.zoom = 100;
+				return;
+			}
+			if (e.key === ',') {
+				e.preventDefault();
+				blurTerminal();
+				appState.showSettings = true;
+				return;
+			}
+		}
 
-      if (e.key === 'Escape') {
-        const hadDialog = showFindOrCreate || showNewNote || showSemanticSearch || appState.showHelp || appState.showGraph || appState.showSettings || appState.showGhostLinks;
-        showFindOrCreate = false;
-        showNewNote = false;
-        showSemanticSearch = false;
-        appState.showHelp = false;
-        appState.showGraph = false;
-        appState.showSettings = false;
-        appState.showGhostLinks = false;
-        if (hadDialog) {
-          nvimTerminalRef?.focus();
-        }
-        return;
-      }
+		if (e.key === 'Escape') {
+			const hadDialog =
+				showFindOrCreate ||
+				showNewNote ||
+				showSemanticSearch ||
+				appState.showHelp ||
+				appState.showGraph ||
+				appState.showSettings ||
+				appState.showGhostLinks;
+			showFindOrCreate = false;
+			showNewNote = false;
+			showSemanticSearch = false;
+			appState.showHelp = false;
+			appState.showGraph = false;
+			appState.showSettings = false;
+			appState.showGhostLinks = false;
+			if (hadDialog) {
+				nvimTerminalRef?.focus();
+			}
+			return;
+		}
 
-      // Don't fire global shortcuts inside modal overlays
-      if (showFindOrCreate || showNewNote || showSemanticSearch || appState.showHelp || appState.showSettings || appState.showGhostLinks) {
-        return;
-      }
+		// Don't fire global shortcuts inside modal overlays
+		if (
+			showFindOrCreate ||
+			showNewNote ||
+			showSemanticSearch ||
+			appState.showHelp ||
+			appState.showSettings ||
+			appState.showGhostLinks
+		) {
+			return;
+		}
 
-      // Only handle remaining shortcuts when not in input
-      const target = e.target as HTMLElement;
-      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
-        return;
-      }
+		// Only handle remaining shortcuts when not in input
+		const target = e.target as HTMLElement;
+		if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
+			return;
+		}
 
-      if (e.key === '?') {
-        e.preventDefault();
-        blurTerminal();
-        appState.showHelp = true;
-        return;
-      }
-    };
+		if (e.key === '?') {
+			e.preventDefault();
+			blurTerminal();
+			appState.showHelp = true;
+			return;
+		}
+	};
 
-    window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
-  });
+	window.addEventListener('keydown', handleKeydown);
+	return () => window.removeEventListener('keydown', handleKeydown);
+});
 
-  async function handleOpenVault(path: string) {
-    const system = await systemOpen(path);
-    appState.system = system;
-    appState.recentSystems = await systemListRecent();
-    // Try to open last file
-    try {
-      const config = await vaultGetConfig(system.path);
-      if (config.last_file) {
-        const content = await fileRead(config.last_file);
-        openFile(config.last_file, content);
-      }
-    } catch {
-      // No last file or failed to read — that's fine
-    }
-    // Background scan for ghost links
-    try {
-      const ghosts = await scanGhostLinks(system.path);
-      appState.ghostLinkCount = ghosts.length;
-    } catch {
-      // Ignore scan errors on open
-    }
-  }
+async function handleOpenVault(path: string) {
+	const system = await systemOpen(path);
+	appState.system = system;
+	appState.recentSystems = await systemListRecent();
+	// Try to open last file
+	try {
+		const config = await vaultGetConfig(system.path);
+		if (config.last_file) {
+			const content = await fileRead(config.last_file);
+			openFile(config.last_file, content);
+		}
+	} catch {
+		// No last file or failed to read — that's fine
+	}
+	// Background scan for ghost links
+	try {
+		const ghosts = await scanGhostLinks(system.path);
+		appState.ghostLinkCount = ghosts.length;
+	} catch {
+		// Ignore scan errors on open
+	}
+}
 
-  async function handleCreateVault(parent: string, name: string) {
-    const path = await vaultCreate(parent, name);
-    await handleOpenVault(path);
-  }
+async function handleCreateVault(parent: string, name: string) {
+	const path = await vaultCreate(parent, name);
+	await handleOpenVault(path);
+}
 </script>
 
 <div class="app" style="zoom: {appState.zoom}%">

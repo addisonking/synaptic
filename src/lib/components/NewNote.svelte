@@ -1,43 +1,43 @@
 <script lang="ts">
-  import { appState, openFile } from '$lib/store.svelte';
-  import { fileCreate, fileRead } from '$lib/api';
-  import { Dialog, Button, Input } from '$lib/components/ui';
+import { fileCreate, fileRead } from '$lib/api';
+import { Button, Dialog, Input } from '$lib/components/ui';
+import { appState, openFile } from '$lib/store.svelte';
 
-  interface Props {
-    onClose: () => void;
-    initialName?: string;
-  }
+interface Props {
+	onClose: () => void;
+	initialName?: string;
+}
 
-  let { onClose, initialName = '' }: Props = $props();
-  let name = $state('');
+let { onClose, initialName = '' }: Props = $props();
+let name = $state('');
 
-  $effect(() => {
-    name = initialName;
-  });
-  let open = $state(true);
+$effect(() => {
+	name = initialName;
+});
+let open = $state(true);
 
-  $effect(() => {
-    if (!open) {
-      onClose();
-    }
-  });
+$effect(() => {
+	if (!open) {
+		onClose();
+	}
+});
 
-  async function handleSubmit() {
-    if (!name.trim() || !appState.system) return;
-    const notesDir = appState.system.path + '/notes';
-    const newPath = notesDir + '/' + name.trim().replace(/\.md$/, '') + '.md';
-    await fileCreate(newPath);
-    const content = await fileRead(newPath);
-    openFile(newPath, content);
-    open = false;
-  }
+async function handleSubmit() {
+	if (!name.trim() || !appState.system) return;
+	const notesDir = `${appState.system.path}/notes`;
+	const newPath = `${notesDir}/${name.trim().replace(/\.md$/, '')}.md`;
+	await fileCreate(newPath);
+	const content = await fileRead(newPath);
+	openFile(newPath, content);
+	open = false;
+}
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSubmit();
-    }
-  }
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === 'Enter') {
+		e.preventDefault();
+		handleSubmit();
+	}
+}
 </script>
 
 <Dialog bind:open title="New Note" contentClass="new-note-dialog">
