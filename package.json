@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "release": "bun run scripts/bump-version.ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.8",

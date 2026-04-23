@@ -2,7 +2,8 @@
   import { appState } from '$lib/store.svelte';
   import { fileTree, fileCreate, fileRead } from '$lib/api';
   import { openFile } from '$lib/store.svelte';
-  import { Command, Dialog } from '$lib/components/ui';
+  import { Command } from 'bits-ui';
+  import { Dialog } from '$lib/components/ui';
 
   interface Props {
     onClose: () => void;

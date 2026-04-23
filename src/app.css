@@ -77,3 +77,63 @@ input:focus {
   background: var(--surface-3);
   color: var(--text-active);
 }
+
+/* Command palette styles */
+.cmd-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+.cmd-input {
+  width: 100%;
+  padding: 16px;
+  font-size: 14px;
+  border: none;
+  border-bottom: 1px solid var(--surface-2);
+  background: var(--surface-1);
+  color: var(--text-bright);
+  outline: none;
+  font-family: var(--font);
+}
+.cmd-input::placeholder {
+  color: var(--muted-2);
+}
+.cmd-list {
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.cmd-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  transition: background 80ms;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.cmd-item:hover,
+.cmd-item[data-selected] {
+  background: var(--surface-2);
+}
+.cmd-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted-2);
+  font-size: 13px;
+}
+.cmd-group-heading {
+  padding: 8px 16px;
+  font-size: 10px;
+  color: var(--muted-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}

@@ -2,7 +2,8 @@
   import { appState, openFile } from '$lib/store.svelte';
   import { semanticSearch, fileRead } from '$lib/api';
   import type { SemanticResult } from '$lib/types';
-  import { Command, Dialog } from '$lib/components/ui';
+  import { Command } from 'bits-ui';
+  import { Dialog } from '$lib/components/ui';
 
   interface Props {
     onClose: () => void;
