@@ -1,6 +1,7 @@
 <script lang="ts">
 import { getVersion } from '@tauri-apps/api/app';
 import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { Check, Download, RotateCcw, X } from 'lucide-svelte';
 import {
 	getSettings,
@@ -137,7 +138,7 @@ async function handleDownloadAndInstall() {
 			}
 		});
 		// Restart the app after install
-		await update.restartToApply();
+		await relaunch();
 	} catch (e) {
 		updateStatus = 'error';
 		updateError = String(e);

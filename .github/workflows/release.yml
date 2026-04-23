@@ -33,6 +33,23 @@ jobs:
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
           echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
+      - name: generate release notes
+        id: release_notes
+        run: |
+          PREV_TAG="${{ steps.prev_tag.outputs.tag }}"
+          if [ -n "$PREV_TAG" ]; then
+            {
+              echo 'body<<EOF'
+              git log "$PREV_TAG"..HEAD --pretty=format:"- %s"
+              echo ""
+              echo ""
+              echo "**Full Changelog**: https://github.com/addisonking/synaptic/compare/$PREV_TAG...$GITHUB_REF_NAME"
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=Initial release" >> $GITHUB_OUTPUT
+          fi
+
       - name: build tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -42,7 +59,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "synaptic ${{ github.ref_name }}"
-          releaseBody: "**Full Changelog**: https://github.com/addisonking/synaptic/compare/${{ steps.prev_tag.outputs.tag }}...${{ github.ref_name }}"
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: "--target universal-apple-darwin"
@@ -73,6 +90,24 @@ jobs:
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
           echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
+      - name: generate release notes
+        id: release_notes
+        shell: bash
+        run: |
+          PREV_TAG="${{ steps.prev_tag.outputs.tag }}"
+          if [ -n "$PREV_TAG" ]; then
+            {
+              echo 'body<<EOF'
+              git log "$PREV_TAG"..HEAD --pretty=format:"- %s"
+              echo ""
+              echo ""
+              echo "**Full Changelog**: https://github.com/addisonking/synaptic/compare/$PREV_TAG...$GITHUB_REF_NAME"
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=Initial release" >> $GITHUB_OUTPUT
+          fi
+
       - name: build tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -82,7 +117,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "synaptic ${{ github.ref_name }}"
-          releaseBody: "**Full Changelog**: https://github.com/addisonking/synaptic/compare/${{ steps.prev_tag.outputs.tag }}...${{ github.ref_name }}"
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: "--target x86_64-pc-windows-msvc"
@@ -117,6 +152,23 @@ jobs:
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
           echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
+      - name: generate release notes
+        id: release_notes
+        run: |
+          PREV_TAG="${{ steps.prev_tag.outputs.tag }}"
+          if [ -n "$PREV_TAG" ]; then
+            {
+              echo 'body<<EOF'
+              git log "$PREV_TAG"..HEAD --pretty=format:"- %s"
+              echo ""
+              echo ""
+              echo "**Full Changelog**: https://github.com/addisonking/synaptic/compare/$PREV_TAG...$GITHUB_REF_NAME"
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=Initial release" >> $GITHUB_OUTPUT
+          fi
+
       - name: build tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -126,7 +178,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "synaptic ${{ github.ref_name }}"
-          releaseBody: "**Full Changelog**: https://github.com/addisonking/synaptic/compare/${{ steps.prev_tag.outputs.tag }}...${{ github.ref_name }}"
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: "--target x86_64-unknown-linux-gnu"
