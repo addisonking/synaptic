@@ -13,19 +13,38 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          fetch-tags: true
 
       - name: setup bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
+      - name: cache bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: setup rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
+      - name: cache rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: install frontend dependencies
         run: bun install
+
+      - name: unshallow for tags
+        run: git fetch --prune --unshallow --tags
 
       - name: get previous tag
         id: prev_tag
@@ -71,17 +90,37 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          fetch-tags: true
 
       - name: setup bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
+      - name: cache bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: setup rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: cache rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: install frontend dependencies
         run: bun install
+
+      - name: unshallow for tags
+        shell: bash
+        run: git fetch --prune --unshallow --tags
 
       - name: get previous tag
         id: prev_tag
@@ -129,8 +168,11 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          fetch-tags: true
 
-      - name: install dependencies
+      - name: install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -140,11 +182,27 @@ jobs:
         with:
           bun-version: latest
 
+      - name: cache bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: setup rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: cache rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: install frontend dependencies
         run: bun install
+
+      - name: unshallow for tags
+        run: git fetch --prune --unshallow --tags
 
       - name: get previous tag
         id: prev_tag
