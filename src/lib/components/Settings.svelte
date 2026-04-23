@@ -1,7 +1,7 @@
 <script lang="ts">
-import { Check, X, Download, RotateCcw } from 'lucide-svelte';
 import { getVersion } from '@tauri-apps/api/app';
 import { check } from '@tauri-apps/plugin-updater';
+import { Check, Download, RotateCcw, X } from 'lucide-svelte';
 import {
 	getSettings,
 	semanticIndexRebuild,
@@ -28,7 +28,15 @@ let testOk = $state<boolean | null>(null);
 
 // Updater state
 let appVersion = $state<string>('');
-let updateStatus = $state<'idle' | 'checking' | 'available' | 'downloading' | 'installing' | 'uptodate' | 'error'>('idle');
+let updateStatus = $state<
+	| 'idle'
+	| 'checking'
+	| 'available'
+	| 'downloading'
+	| 'installing'
+	| 'uptodate'
+	| 'error'
+>('idle');
 let updateError = $state<string | null>(null);
 let updateVersion = $state<string>('');
 let updateBody = $state<string>('');
