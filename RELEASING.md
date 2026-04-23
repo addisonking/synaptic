@@ -24,9 +24,18 @@ it runs on `macos-latest` (apple silicon) and:
 1. installs bun and rust
 2. installs frontend dependencies
 3. builds the tauri app for `aarch64-apple-darwin`
-4. creates a **draft** github release with the `.dmg` and `.app` bundle attached
+4. creates a **draft** github release named "synaptic vX.Y.Z" with the `.dmg` and `.app` bundle attached
 
-you then manually review and publish the draft release in the github ui.
+## publishing the release
+
+**important: do not create a release manually from the tag page.**
+
+1. wait for the github actions workflow to finish (check the actions tab)
+2. go to the releases page: `https://github.com/addisonking/synaptic/releases`
+3. find the **draft** release named "synaptic vX.Y.Z" (the one created by the workflow)
+4. click "edit" on that draft, review it, then click "publish release"
+
+if you create a new release from the tag before the workflow finishes, that release will be empty and the binaries will end up on the workflow's draft instead.
 
 ## notes
 

@@ -23,6 +23,14 @@
   let lastH = 0;
   let cursorPoll: ReturnType<typeof setInterval> | null = null;
 
+  export function blur() {
+    terminal?.blur();
+  }
+
+  export function focus() {
+    terminal?.focus();
+  }
+
   function clearTimers() {
     resizeTimers.forEach((t) => clearTimeout(t));
     resizeTimers = [];

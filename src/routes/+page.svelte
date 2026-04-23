@@ -21,6 +21,11 @@
   let showGhostLinks = $state(false);
   let newNoteName = $state('');
   let ptyId = $state(0);
+  let nvimTerminalRef: { blur(): void; focus(): void } | undefined = $state();
+
+  function blurTerminal() {
+    nvimTerminalRef?.blur();
+  }
 
   onMount(() => {
     loadZoom();
@@ -36,26 +41,31 @@
       if (e.metaKey || e.ctrlKey) {
         if (e.key === 'p' && !e.shiftKey) {
           e.preventDefault();
+          blurTerminal();
           showFindOrCreate = true;
           return;
         }
         if (e.key === 'P' || (e.key === 'p' && e.shiftKey)) {
           e.preventDefault();
+          blurTerminal();
           showSemanticSearch = true;
           return;
         }
         if (e.key === 'n') {
           e.preventDefault();
+          blurTerminal();
           showNewNote = true;
           return;
         }
         if (e.key === 'g') {
           e.preventDefault();
+          blurTerminal();
           appState.showGraph = !appState.showGraph;
           return;
         }
         if (e.key === 'G' || (e.key === 'g' && e.shiftKey)) {
           e.preventDefault();
+          blurTerminal();
           appState.showGhostLinks = !appState.showGhostLinks;
           return;
         }
@@ -86,12 +96,14 @@
         }
         if (e.key === ',') {
           e.preventDefault();
+          blurTerminal();
           appState.showSettings = true;
           return;
         }
       }
 
       if (e.key === 'Escape') {
+        const hadDialog = showFindOrCreate || showNewNote || showSemanticSearch || appState.showHelp || appState.showGraph || appState.showSettings || appState.showGhostLinks;
         showFindOrCreate = false;
         showNewNote = false;
         showSemanticSearch = false;
@@ -99,6 +111,9 @@
         appState.showGraph = false;
         appState.showSettings = false;
         appState.showGhostLinks = false;
+        if (hadDialog) {
+          nvimTerminalRef?.focus();
+        }
         return;
       }
 
@@ -115,6 +130,7 @@
 
       if (e.key === '?') {
         e.preventDefault();
+        blurTerminal();
         appState.showHelp = true;
         return;
       }
@@ -163,8 +179,9 @@
   {:else}
     <div class="main-app">
       <Titlebar
-        onFindOrCreate={() => showFindOrCreate = true}
-        onNewNote={() => showNewNote = true}
+        onFindOrCreate={() => { blurTerminal(); showFindOrCreate = true; }}
+        onNewNote={() => { blurTerminal(); showNewNote = true; }}
+        onBlurTerminal={blurTerminal}
       />
       <div class="content">
         {#if appState.openFilePath}
@@ -175,7 +192,7 @@
             <div class="divider"></div>
             <div class="terminal-pane">
               {#key appState.openFilePath}
-                <NvimTerminal filePath={appState.openFilePath} ptyId={ptyId} />
+                <NvimTerminal bind:this={nvimTerminalRef} filePath={appState.openFilePath} ptyId={ptyId} />
               {/key}
             </div>
           </div>
@@ -212,6 +229,7 @@
   <Graph
     onClose={() => appState.showGraph = false}
     onCreateGhostNote={(name) => {
+      blurTerminal();
       newNoteName = name;
       showNewNote = true;
     }}

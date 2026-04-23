@@ -4,9 +4,10 @@
   interface Props {
     onFindOrCreate: () => void;
     onNewNote: () => void;
+    onBlurTerminal?: () => void;
   }
 
-  let { onFindOrCreate, onNewNote }: Props = $props();
+  let { onFindOrCreate, onNewNote, onBlurTerminal }: Props = $props();
   let deleteClicks = $state(0);
 
   async function handleDelete() {
@@ -46,11 +47,11 @@
     <button class="action-btn" onclick={onNewNote} title="New Note (⌘N)">
       New <span class="keyhint">⌘N</span>
     </button>
-    <button class="action-btn" onclick={() => appState.showGraph = true} title="Graph (⌘G)">
+    <button class="action-btn" onclick={() => { onBlurTerminal?.(); appState.showGraph = true; }} title="Graph (⌘G)">
       Graph <span class="keyhint">⌘G</span>
     </button>
     {#if appState.ghostLinkCount > 0}
-      <button class="action-btn ghost-btn" onclick={() => appState.showGhostLinks = true} title="Ghost Links (⌘⇧G)">
+      <button class="action-btn ghost-btn" onclick={() => { onBlurTerminal?.(); appState.showGhostLinks = true; }} title="Ghost Links (⌘⇧G)">
         Ghosts <span class="ghost-badge">{appState.ghostLinkCount}</span>
       </button>
     {/if}
@@ -67,10 +68,10 @@
         {deleteClicks === 1 ? 'Click to confirm' : 'Delete'}
       </button>
     {/if}
-    <button class="action-btn" onclick={() => appState.showSettings = true} title="Settings (⌘,)">
+    <button class="action-btn" onclick={() => { onBlurTerminal?.(); appState.showSettings = true; }} title="Settings (⌘,)">
       Settings
     </button>
-    <button class="action-btn" onclick={() => appState.showHelp = true} title="Help (?)">
+    <button class="action-btn" onclick={() => { onBlurTerminal?.(); appState.showHelp = true; }} title="Help (?)">
       Help
     </button>
   </div>
