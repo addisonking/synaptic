@@ -1,6 +1,6 @@
 Synaptic
 
-A minimal, keyboard-driven desktop note-taking app.
+A minimal, neovim-driven desktop personal knowledge graph app.
 Markdown files, live preview, embedded Neovim, graph view, semantic search.
 
 On macOS, if Gatekeeper blocks the app:
