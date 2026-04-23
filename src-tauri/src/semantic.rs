@@ -1,9 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use std::sync::OnceLock;
 use walkdir::WalkDir;
 
 use crate::settings::get_settings;
+
+pub(crate) fn http_client() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(reqwest::Client::new)
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EmbeddingChunk {
@@ -154,7 +160,7 @@ pub async fn semantic_index_rebuild(
         .ollama_model
         .unwrap_or_else(|| "nomic-embed-text".to_string());
 
-    let client = reqwest::Client::new();
+    let client = http_client();
     let mut chunks: Vec<EmbeddingChunk> = Vec::new();
 
     for entry in WalkDir::new(system_path)
@@ -241,7 +247,7 @@ pub async fn semantic_search(
         .ollama_model
         .unwrap_or_else(|| "nomic-embed-text".to_string());
 
-    let client = reqwest::Client::new();
+    let client = http_client();
     let mut query_vector = get_embedding(&client, &url, &model, query).await?;
     normalize(&mut query_vector);
 
@@ -294,7 +300,7 @@ pub async fn test_ollama_connection(
         .ollama_model
         .unwrap_or_else(|| "nomic-embed-text".to_string());
 
-    let client = reqwest::Client::new();
+    let client = http_client();
 
     // 1. Check if Ollama is reachable
     let tags_res = client

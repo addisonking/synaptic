@@ -1,12 +1,13 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
 
 use crate::indexer::build_index;
 use crate::semantic;
+use crate::semantic::http_client;
 use crate::settings::get_settings;
 use tauri::ipc::Channel;
 
@@ -33,29 +34,6 @@ pub struct GhostNotePreview {
 
 fn notes_dir(vault_path: &str) -> std::path::PathBuf {
     Path::new(vault_path).join("notes")
-}
-
-fn note_exists(vault_path: &str, name: &str) -> bool {
-    let target_lower = name.to_lowercase();
-    for entry in WalkDir::new(vault_path)
-        .into_iter()
-        .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
-        .filter_map(|e| e.ok())
-    {
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-        if ext != "md" {
-            continue;
-        }
-        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
-        if stem == target_lower {
-            return true;
-        }
-    }
-    false
 }
 
 fn extract_context(content: &str, link_line: usize, window: usize) -> String {
@@ -139,6 +117,23 @@ pub fn scan_ghost_links_cmd(system_path: String) -> Result<Vec<GhostLink>, Strin
     let wiki_re = Regex::new(r"\[\[([^\]|]+)(?:\|[^\]]*)?\]\]").unwrap();
     let mut raw: HashMap<String, Vec<GhostSource>> = HashMap::new();
 
+    // Build a set of existing note names once for O(1) lookups
+    let mut existing_names = HashSet::new();
+    for entry in WalkDir::new(&system_path)
+        .into_iter()
+        .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
+        .filter_map(|e| e.ok())
+    {
+        let path = entry.path();
+        if !path.is_file() || path.extension().and_then(|e| e.to_str()).unwrap_or("") != "md" {
+            continue;
+        }
+        let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+        if !name.is_empty() {
+            existing_names.insert(name);
+        }
+    }
+
     for entry in WalkDir::new(&system_path)
         .into_iter()
         .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
@@ -167,7 +162,7 @@ pub fn scan_ghost_links_cmd(system_path: String) -> Result<Vec<GhostLink>, Strin
                 if target.is_empty() {
                     continue;
                 }
-                if note_exists(&system_path, &target) {
+                if existing_names.contains(&target.to_lowercase()) {
                     continue;
                 }
                 let ctx = extract_context(&content, line_num + 1, 3);
@@ -416,7 +411,7 @@ Write a concise, information-dense markdown note. Match the writing style and de
         },
     );
 
-    let client = reqwest::Client::new();
+    let client = http_client();
     let content = ollama_generate(&client, &url, &model, &prompt).await?;
 
     // Ensure it starts with a heading
@@ -524,7 +519,7 @@ Write a concise, information-dense markdown note. Match the writing style and de
         data: "Generating note (this may take a moment)...".to_string(),
     }).map_err(|e| e.to_string())?;
 
-    let client = reqwest::Client::new();
+    let client = http_client();
     ollama_generate_stream(&client, &url, &model, &prompt, &on_chunk).await?;
 
     Ok(())
