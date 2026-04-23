@@ -78,3 +78,12 @@ export interface GhostNotePreview {
 	target: string;
 	content: string;
 }
+
+export interface DependencyStatus {
+	neovim_installed: boolean;
+	neovim_path: string | null;
+	ollama_running: boolean;
+	ollama_url: string;
+	platform: string;
+	message: string;
+}

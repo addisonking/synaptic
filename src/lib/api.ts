@@ -2,6 +2,7 @@ import { type Channel, invoke } from '@tauri-apps/api/core';
 import type {
 	AppSettings,
 	BacklinkInfo,
+	DependencyStatus,
 	FileNode,
 	GhostLink,
 	GhostNotePreview,
@@ -110,6 +111,10 @@ export function semanticIndexRebuild(systemPath: string): Promise<void> {
 
 export function testOllamaConnection(): Promise<OllamaHealth> {
 	return invoke('test_ollama_connection_cmd');
+}
+
+export function checkDependencies(): Promise<DependencyStatus> {
+	return invoke('check_dependencies_cmd');
 }
 
 // Settings

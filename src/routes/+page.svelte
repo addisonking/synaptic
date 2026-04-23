@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import {
+	checkDependencies,
 	fileRead,
 	scanGhostLinks,
 	systemListRecent,
@@ -8,6 +9,7 @@ import {
 	vaultCreate,
 	vaultGetConfig,
 } from '$lib/api';
+import DependencyCheck from '$lib/components/DependencyCheck.svelte';
 import Editor from '$lib/components/Editor.svelte';
 import FindOrCreate from '$lib/components/FindOrCreate.svelte';
 import GhostLinks from '$lib/components/GhostLinks.svelte';
@@ -27,6 +29,7 @@ import {
 	openFile,
 	refreshFileTree,
 } from '$lib/store.svelte';
+import type { DependencyStatus } from '$lib/types';
 
 let showFindOrCreate = $state(false);
 let showNewNote = $state(false);
@@ -36,15 +39,30 @@ let newNoteName = $state('');
 let ptyId = $state(0);
 let nvimTerminalRef: { blur(): void; focus(): void } | undefined = $state();
 
+let depsReady = $state(false);
+let depsSatisfied = $state(false);
+let depsStatus = $state<DependencyStatus | null>(null);
+
 function blurTerminal() {
 	nvimTerminalRef?.blur();
 }
 
 onMount(() => {
 	loadZoom();
-	systemListRecent().then((recents) => {
-		appState.recentSystems = recents;
-	});
+	checkDependencies()
+		.then((status) => {
+			depsStatus = status;
+			depsReady = true;
+			if (status.neovim_installed && status.ollama_running) {
+				depsSatisfied = true;
+				systemListRecent().then((recents) => {
+					appState.recentSystems = recents;
+				});
+			}
+		})
+		.catch(() => {
+			depsReady = true;
+		});
 
 	const handleKeydown = (e: KeyboardEvent) => {
 		// Disable global shortcuts when no vault is open (landing screen)
@@ -168,6 +186,12 @@ onMount(() => {
 });
 
 async function handleOpenVault(path: string) {
+	const status = await checkDependencies();
+	if (!status.neovim_installed || !status.ollama_running) {
+		depsStatus = status;
+		depsSatisfied = false;
+		return;
+	}
 	const system = await systemOpen(path);
 	appState.system = system;
 	appState.recentSystems = await systemListRecent();
@@ -192,13 +216,33 @@ async function handleOpenVault(path: string) {
 }
 
 async function handleCreateVault(parent: string, name: string) {
+	const status = await checkDependencies();
+	if (!status.neovim_installed || !status.ollama_running) {
+		depsStatus = status;
+		depsSatisfied = false;
+		return;
+	}
 	const path = await vaultCreate(parent, name);
 	await handleOpenVault(path);
 }
 </script>
 
 <div class="app" style="zoom: {appState.zoom}%">
-  {#if !appState.system}
+  {#if !depsReady}
+    <div class="loading-screen">
+      <p>Checking dependencies…</p>
+    </div>
+  {:else if !depsSatisfied && depsStatus}
+    <DependencyCheck
+      initialStatus={depsStatus}
+      onResolved={() => {
+        depsSatisfied = true;
+        systemListRecent().then((recents) => {
+          appState.recentSystems = recents;
+        });
+      }}
+    />
+  {:else if !appState.system}
     <Landing
       recents={appState.recentSystems}
       onOpenVault={handleOpenVault}
@@ -273,6 +317,16 @@ async function handleCreateVault(parent: string, name: string) {
     width: 100vw;
     overflow: hidden;
     background: var(--bg);
+  }
+
+  .loading-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    color: var(--muted-2);
+    font-size: 13px;
   }
 
   .main-app {

@@ -54,6 +54,16 @@ pub struct VaultConfig {
     pub last_file: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DependencyStatus {
+    pub neovim_installed: bool,
+    pub neovim_path: Option<String>,
+    pub ollama_running: bool,
+    pub ollama_url: String,
+    pub platform: String,
+    pub message: String,
+}
+
 // ─── Paths ───────────────────────────────────────────────────────────────────
 
 fn config_dir(app: &AppHandle) -> PathBuf {
@@ -460,6 +470,65 @@ fn set_settings_cmd(app: AppHandle, settings: Settings) -> Result<(), String> {
     set_settings(&app, settings).map_err(|e| e.to_string())
 }
 
+// ─── Dependency Check ────────────────────────────────────────────────────────
+
+#[tauri::command]
+async fn check_dependencies_cmd(app: AppHandle) -> Result<DependencyStatus, String> {
+    let settings = get_settings(&app).unwrap_or_default();
+
+    let nvim_path = {
+        let mut candidates: Vec<&str> = vec!["nvim", "/opt/homebrew/bin/nvim", "/usr/local/bin/nvim", "/usr/bin/nvim", "vim", "/opt/homebrew/bin/vim", "/usr/local/bin/vim"];
+        if let Some(ref p) = settings.nvim_path {
+            if !p.is_empty() {
+                candidates.insert(0, p.as_str());
+            }
+        }
+        candidates
+            .into_iter()
+            .find(|&c| {
+                let path = Path::new(c);
+                if path.is_absolute() {
+                    path.exists()
+                } else {
+                    which::which(c).is_ok()
+                }
+            })
+            .map(|c| c.to_string())
+    };
+
+    let neovim_installed = nvim_path.is_some();
+
+    let ollama_url = settings
+        .ollama_url
+        .unwrap_or_else(|| "http://localhost:11434".to_string());
+    let client = semantic::http_client();
+    let ollama_running = match client
+        .get(format!("{}/api/tags", ollama_url.trim_end_matches('/')))
+        .send()
+        .await
+    {
+        Ok(res) => res.status().is_success(),
+        Err(_) => false,
+    };
+
+    let platform = std::env::consts::OS.to_string();
+
+    let message = if neovim_installed && ollama_running {
+        "All dependencies satisfied.".to_string()
+    } else {
+        "Missing required dependencies.".to_string()
+    };
+
+    Ok(DependencyStatus {
+        neovim_installed,
+        neovim_path: nvim_path,
+        ollama_running,
+        ollama_url,
+        platform,
+        message,
+    })
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 fn main() {
@@ -499,6 +568,7 @@ fn main() {
             preview_ghost_note_cmd,
             preview_ghost_note_stream_cmd,
             create_ghost_notes_cmd,
+            check_dependencies_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
