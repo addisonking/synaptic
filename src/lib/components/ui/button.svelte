@@ -1,5 +1,6 @@
 <script lang="ts">
-import type { Button } from 'bits-ui';
+// biome-ignore lint/style/useImportType: Button.Root is used as a Svelte component in the template
+import { Button } from 'bits-ui';
 import type { Snippet } from 'svelte';
 import { cn } from '$lib/utils';
 
