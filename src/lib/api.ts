@@ -9,6 +9,7 @@ import type {
 	GhostSource,
 	GraphData,
 	OllamaHealth,
+	ScratchEntry,
 	SearchResult,
 	SemanticResult,
 	SystemInfo,
@@ -189,4 +190,20 @@ export function ptyClose(id: string): Promise<void> {
 
 export function ptyCursorLine(id: string): Promise<number> {
 	return invoke('pty_cursor_line', { id });
+}
+
+// Scratch Notes
+export function scratchCreate(systemPath: string): Promise<string> {
+	return invoke('scratch_create', { systemPath });
+}
+
+export function scratchList(systemPath: string): Promise<ScratchEntry[]> {
+	return invoke('scratch_list', { systemPath });
+}
+
+export function generateNoteTitle(
+	systemPath: string,
+	path: string,
+): Promise<string> {
+	return invoke('generate_note_title', { systemPath, path });
 }

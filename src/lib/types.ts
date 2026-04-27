@@ -87,3 +87,8 @@ export interface DependencyStatus {
 	platform: string;
 	message: string;
 }
+
+export interface ScratchEntry {
+	name: string;
+	path: string;
+}

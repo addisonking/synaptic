@@ -165,7 +165,10 @@ pub async fn semantic_index_rebuild(
 
     for entry in WalkDir::new(system_path)
         .into_iter()
-        .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            !name.starts_with('.') && name != "scratch"
+        })
         .filter_map(|e| e.ok())
     {
         let path = entry.path();

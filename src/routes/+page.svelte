@@ -3,7 +3,10 @@ import { onMount } from 'svelte';
 import {
 	checkDependencies,
 	fileRead,
+	fileRename,
+	generateNoteTitle,
 	scanGhostLinks,
+	scratchCreate,
 	systemListRecent,
 	systemOpen,
 	vaultCreate,
@@ -18,6 +21,7 @@ import KeybindHelp from '$lib/components/KeybindHelp.svelte';
 import Landing from '$lib/components/Landing.svelte';
 import NewNote from '$lib/components/NewNote.svelte';
 import NvimTerminal from '$lib/components/NvimTerminal.svelte';
+import ScratchFinder from '$lib/components/ScratchFinder.svelte';
 import SemanticSearch from '$lib/components/SemanticSearch.svelte';
 import Settings from '$lib/components/Settings.svelte';
 import Titlebar from '$lib/components/Titlebar.svelte';
@@ -34,10 +38,11 @@ import type { DependencyStatus } from '$lib/types';
 let showFindOrCreate = $state(false);
 let showNewNote = $state(false);
 let showSemanticSearch = $state(false);
-let showGhostLinks = $state(false);
+let showScratchFinder = $state(false);
 let newNoteName = $state('');
 let ptyId = $state(0);
 let nvimTerminalRef: { blur(): void; focus(): void } | undefined = $state();
+let previousFilePath: string | null = $state(null);
 
 let depsReady = $state(false);
 let depsSatisfied = $state(false);
@@ -46,6 +51,50 @@ let depsStatus = $state<DependencyStatus | null>(null);
 function blurTerminal() {
 	nvimTerminalRef?.blur();
 }
+
+function isScratchPath(path: string | null): boolean {
+	if (!path) return false;
+	return path.includes('/scratch/');
+}
+
+function isTimestampName(name: string): boolean {
+	return /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/.test(name);
+}
+
+async function tryAutoRenameScratch(oldPath: string) {
+	if (!appState.system) return;
+	if (!isScratchPath(oldPath)) return;
+
+	const filename = oldPath.split('/').pop()?.replace(/\.md$/, '') || '';
+	if (!isTimestampName(filename)) return;
+
+	try {
+		const newPath = await generateNoteTitle(appState.system.path, oldPath);
+		if (newPath && newPath !== oldPath) {
+			await fileRename(oldPath, newPath);
+			await refreshFileTree();
+		}
+	} catch {
+		// Auto-rename is best-effort; don't disrupt the user if it fails
+	}
+}
+
+async function createScratchNote() {
+	if (!appState.system) return;
+	blurTerminal();
+	const path = await scratchCreate(appState.system.path);
+	const content = await fileRead(path);
+	openFile(path, content);
+	refreshFileTree();
+}
+
+$effect(() => {
+	const currentPath = appState.openFilePath;
+	if (previousFilePath && previousFilePath !== currentPath) {
+		tryAutoRenameScratch(previousFilePath);
+	}
+	previousFilePath = currentPath;
+});
 
 onMount(() => {
 	loadZoom();
@@ -82,13 +131,24 @@ onMount(() => {
 				showSemanticSearch = true;
 				return;
 			}
-			if (e.key === 'n') {
+			if (e.key === 'n' && !e.shiftKey) {
 				e.preventDefault();
 				blurTerminal();
 				showNewNote = true;
 				return;
 			}
-			if (e.key === 'g') {
+			if (e.key === 'N' || (e.key === 'n' && e.shiftKey)) {
+				e.preventDefault();
+				createScratchNote();
+				return;
+			}
+			if (e.key === 'S' || (e.key === 's' && e.shiftKey)) {
+				e.preventDefault();
+				blurTerminal();
+				showScratchFinder = true;
+				return;
+			}
+			if (e.key === 'g' && !e.shiftKey) {
 				e.preventDefault();
 				blurTerminal();
 				appState.showGraph = !appState.showGraph;
@@ -138,6 +198,7 @@ onMount(() => {
 				showFindOrCreate ||
 				showNewNote ||
 				showSemanticSearch ||
+				showScratchFinder ||
 				appState.showHelp ||
 				appState.showGraph ||
 				appState.showSettings ||
@@ -145,6 +206,7 @@ onMount(() => {
 			showFindOrCreate = false;
 			showNewNote = false;
 			showSemanticSearch = false;
+			showScratchFinder = false;
 			appState.showHelp = false;
 			appState.showGraph = false;
 			appState.showSettings = false;
@@ -160,6 +222,7 @@ onMount(() => {
 			showFindOrCreate ||
 			showNewNote ||
 			showSemanticSearch ||
+			showScratchFinder ||
 			appState.showHelp ||
 			appState.showSettings ||
 			appState.showGhostLinks
@@ -253,6 +316,7 @@ async function handleCreateVault(parent: string, name: string) {
       <Titlebar
         onFindOrCreate={() => { blurTerminal(); showFindOrCreate = true; }}
         onNewNote={() => { blurTerminal(); showNewNote = true; }}
+        onNewScratch={createScratchNote}
         onBlurTerminal={blurTerminal}
       />
       <div class="content">
@@ -274,6 +338,7 @@ async function handleCreateVault(parent: string, name: string) {
               <p>No note open</p>
               <p class="muted">Press <kbd>⌘P</kbd> to find or create a note</p>
               <p class="muted">Press <kbd>⌘N</kbd> to create a new note</p>
+              <p class="muted">Press <kbd>⌘⇧N</kbd> for a quick scratch note</p>
             </div>
           </div>
         {/if}
@@ -290,6 +355,9 @@ async function handleCreateVault(parent: string, name: string) {
 {/if}
 {#if showSemanticSearch}
   <SemanticSearch onClose={() => showSemanticSearch = false} />
+{/if}
+{#if showScratchFinder}
+  <ScratchFinder onClose={() => showScratchFinder = false} />
 {/if}
 {#if appState.showSettings}
   <Settings onClose={() => appState.showSettings = false} />

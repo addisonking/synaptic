@@ -121,7 +121,10 @@ pub fn scan_ghost_links_cmd(system_path: String) -> Result<Vec<GhostLink>, Strin
     let mut existing_names = HashSet::new();
     for entry in WalkDir::new(&system_path)
         .into_iter()
-        .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
+        .filter_entry(|e| {
+            let n = e.file_name().to_string_lossy();
+            !n.starts_with('.') && n != "scratch"
+        })
         .filter_map(|e| e.ok())
     {
         let path = entry.path();
@@ -136,7 +139,10 @@ pub fn scan_ghost_links_cmd(system_path: String) -> Result<Vec<GhostLink>, Strin
 
     for entry in WalkDir::new(&system_path)
         .into_iter()
-        .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
+        .filter_entry(|e| {
+            let n = e.file_name().to_string_lossy();
+            !n.starts_with('.') && n != "scratch"
+        })
         .filter_map(|e| e.ok())
     {
         let path = entry.path();

@@ -21,6 +21,10 @@ use settings::{get_settings, set_settings, Settings};
 use pty::{pty_create, pty_write, pty_resize, pty_close, pty_cursor_line};
 use ghost::{scan_ghost_links_cmd, preview_ghost_note_cmd, preview_ghost_note_stream_cmd, create_ghost_notes_cmd};
 
+fn scratch_dir(vault_path: &str) -> PathBuf {
+    Path::new(vault_path).join("scratch")
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -142,6 +146,12 @@ fn system_open(app: AppHandle, path: String) -> Result<SystemInfo, String> {
     if !notes_dir.exists() {
         fs::create_dir_all(&notes_dir).ok();
     }
+
+    // Ensure scratch dir exists
+    let sdir = scratch_dir(&path);
+    if !sdir.exists() {
+        fs::create_dir_all(&sdir).ok();
+    }
     if notes_dir.read_dir().map(|mut d| d.next().is_none()).unwrap_or(true) {
         let welcome_path = notes_dir.join("welcome.md");
         if !welcome_path.exists() {
@@ -243,7 +253,7 @@ fn file_tree(system_path: String) -> Result<Vec<FileNode>, String> {
         for entry in fs::read_dir(path).map_err(|e| e.to_string())? {
             let entry = entry.map_err(|e| e.to_string())?;
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.starts_with('.') || name.ends_with("~") || name.ends_with(".swp") || name.ends_with(".swo") {
+            if name.starts_with('.') || name == "scratch" || name.ends_with("~") || name.ends_with(".swp") || name.ends_with(".swo") {
                 continue;
             }
             let entry_path = entry.path();
@@ -368,7 +378,7 @@ fn search(system_path: String, query: String) -> Result<Vec<SearchResult>, Strin
         .into_iter()
         .filter_entry(|e| {
             let name = e.file_name().to_string_lossy();
-            !name.starts_with('.') && !name.ends_with("~")
+            !name.starts_with('.') && !name.ends_with("~") && name != "scratch"
         })
         .filter_map(|e| e.ok())
     {
@@ -437,12 +447,153 @@ fn get_graph_cmd(system_path: String) -> Result<indexer::GraphData, String> {
     get_graph(&system_path).map_err(|e| e.to_string())
 }
 
+// ─── Scratch Notes ───────────────────────────────────────────────────────────
+
+#[tauri::command]
+fn scratch_create(system_path: String) -> Result<String, String> {
+    let dir = scratch_dir(&system_path);
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let timestamp = chrono::Local::now().format("%Y-%m-%d-%H-%M-%S").to_string();
+    let filename = format!("{}.md", timestamp);
+    let path = dir.join(&filename);
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Scratch");
+    fs::write(&path, format!("# {}\n\n", stem)).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ScratchEntry {
+    pub name: String,
+    pub path: String,
+}
+
+#[tauri::command]
+fn scratch_list(system_path: String) -> Result<Vec<ScratchEntry>, String> {
+    let dir = scratch_dir(&system_path);
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut entries = vec![];
+    for entry in fs::read_dir(&dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()).unwrap_or("") != "md" {
+            continue;
+        }
+        let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+        entries.push(ScratchEntry {
+            name,
+            path: path.to_string_lossy().to_string(),
+        });
+    }
+    entries.sort_by(|a, b| b.name.cmp(&a.name));
+    Ok(entries)
+}
+
+#[tauri::command]
+async fn generate_note_title(_system_path: String, path: String, app: AppHandle) -> Result<String, String> {
+    let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let trimmed = content.trim();
+    if trimmed.len() < 20 {
+        return Ok(String::new());
+    }
+
+    let settings = get_settings(&app).map_err(|e| e.to_string())?;
+    let url = settings
+        .ollama_url
+        .unwrap_or_else(|| "http://localhost:11434".to_string());
+    let model = settings
+        .ghost_model
+        .or(settings.ollama_model)
+        .unwrap_or_else(|| "gemma4:26b".to_string());
+
+    #[derive(Serialize)]
+    struct GenerateReq<'a> {
+        model: &'a str,
+        prompt: &'a str,
+        stream: bool,
+    }
+    #[derive(Deserialize)]
+    struct GenerateRes {
+        response: String,
+    }
+
+    let prompt = format!(
+        r#"You are a file naming assistant. Given the following note content, generate a concise, descriptive filename in kebab-case (lowercase, words separated by hyphens). The name should capture the main topic. Respond with ONLY the filename, no extension, no explanation, no quotes.
+
+Note content:
+{}"#,
+        content.chars().take(1500).collect::<String>()
+    );
+
+    let client = semantic::http_client();
+    let req = GenerateReq { model: &model, prompt: &prompt, stream: false };
+    let res = client
+        .post(format!("{}/api/generate", url.trim_end_matches('/')))
+        .json(&req)
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_connect() || e.is_request() {
+                format!("Cannot connect to Ollama at {}. Is it running?", url)
+            } else {
+                format!("Ollama request failed: {}", e)
+            }
+        })?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let body_text = res.text().await.unwrap_or_default();
+        return Err(format!("Ollama returned HTTP {}: {}", status, body_text));
+    }
+
+    let body: GenerateRes = res.json().await.map_err(|e| format!("Failed to parse Ollama response: {}", e))?;
+    let raw = body.response.trim().to_string();
+
+    let sanitized: String = raw
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' { c } else if c == ' ' { '-' } else { '\0' })
+        .filter(|c| *c != '\0')
+        .collect();
+    let sanitized = sanitized.trim_matches('-').to_string();
+    let sanitized = sanitized.chars().take(80).collect::<String>();
+
+    if sanitized.is_empty() {
+        return Ok(String::new());
+    }
+
+    let new_path = Path::new(&path)
+        .with_file_name(format!("{}.md", sanitized));
+
+    // Check for collision with existing file
+    if new_path.exists() && new_path != Path::new(&path) {
+        let mut i = 1;
+        loop {
+            let candidate = Path::new(&path)
+                .with_file_name(format!("{}-{}.md", sanitized, i));
+            if !candidate.exists() {
+                return Ok(candidate.to_string_lossy().to_string());
+            }
+            i += 1;
+            if i > 100 {
+                return Ok(String::new());
+            }
+        }
+    }
+
+    Ok(new_path.to_string_lossy().to_string())
+}
+
 #[tauri::command]
 fn find_note(system_path: String, name: String) -> Result<Option<String>, String> {
     let target_lower = name.to_lowercase();
     for entry in WalkDir::new(&system_path)
         .into_iter()
-        .filter_entry(|e| !e.file_name().to_string_lossy().starts_with('.'))
+        .filter_entry(|e| {
+            let n = e.file_name().to_string_lossy();
+            !n.starts_with('.') && n != "scratch"
+        })
         .filter_map(|e| e.ok())
     {
         let path = entry.path();
@@ -554,6 +705,9 @@ fn main() {
             get_backlinks_cmd,
             get_graph_cmd,
             find_note,
+            scratch_create,
+            scratch_list,
+            generate_note_title,
             get_settings_cmd,
             set_settings_cmd,
             semantic_index_rebuild_cmd,

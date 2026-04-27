@@ -10,10 +10,12 @@ import {
 interface Props {
 	onFindOrCreate: () => void;
 	onNewNote: () => void;
+	onNewScratch?: () => void;
 	onBlurTerminal?: () => void;
 }
 
-let { onFindOrCreate, onNewNote, onBlurTerminal }: Props = $props();
+let { onFindOrCreate, onNewNote, onNewScratch, onBlurTerminal }: Props =
+	$props();
 let deleteClicks = $state(0);
 
 async function handleDelete() {
@@ -53,6 +55,9 @@ async function handleDelete() {
     </button>
     <button class="action-btn" onclick={onNewNote} title="New Note (⌘N)">
       New <span class="keyhint">⌘N</span>
+    </button>
+    <button class="action-btn" onclick={onNewScratch} title="Scratch Note (⌘⇧N)">
+      Scratch <span class="keyhint">⌘⇧N</span>
     </button>
     <button class="action-btn" onclick={() => { onBlurTerminal?.(); appState.showGraph = true; }} title="Graph (⌘G)">
       Graph <span class="keyhint">⌘G</span>
