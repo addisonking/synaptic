@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Check, Download, RotateCcw, X } from 'lucide-svelte';
+import { Check, X } from 'lucide-svelte';
 import {
 	getSettings,
 	semanticIndexRebuild,
@@ -9,12 +9,6 @@ import {
 import { Button, Dialog, Input, Tabs } from '$lib/components/ui';
 import { appState } from '$lib/store.svelte';
 import type { AppSettings, OllamaHealth } from '$lib/types';
-import {
-	checkForUpdate,
-	downloadAndInstallUpdate,
-	initAppVersion,
-	updater,
-} from '$lib/updater.svelte';
 
 interface Props {
 	onClose: () => void;
@@ -40,7 +34,6 @@ $effect(() => {
 	getSettings().then((s) => {
 		settings = { ...s };
 	});
-	initAppVersion();
 });
 
 async function saveSettings() {
@@ -102,48 +95,7 @@ const tabItems = [
             <span class="hint">Path to the nvim executable used in the terminal pane.</span>
           </div>
 
-          <div class="field">
-            <span class="field-label">Version</span>
-            <span class="hint">{updater.appVersion}</span>
-          </div>
 
-          <div class="field">
-            <span class="field-label">Updates</span>
-            <div class="update-row">
-              <Button
-                variant={updater.status === 'available' ? 'primary' : 'default'}
-                size="sm"
-                onclick={updater.status === 'available' ? downloadAndInstallUpdate : checkForUpdate}
-                disabled={updater.status === 'checking' || updater.status === 'downloading' || updater.status === 'installing'}
-              >
-                {#if updater.status === 'checking'}
-                  Checking…
-                {:else if updater.status === 'downloading'}
-                  Downloading… {Math.round(updater.progress)}%
-                {:else if updater.status === 'installing'}
-                  Installing…
-                {:else if updater.status === 'available'}
-                  <Download size={14} /> Download & Install v{updater.version}
-                {:else if updater.status === 'uptodate'}
-                  <Check size={14} /> Up to date
-                {:else if updater.status === 'error'}
-                  <RotateCcw size={14} /> Retry
-                {:else}
-                  Check for Updates
-                {/if}
-              </Button>
-            </div>
-            {#if updater.status === 'available' && updater.body}
-              <div class="update-body">{updater.body}</div>
-            {/if}
-            {#if updater.status === 'error'}
-              <span class="hint error">{updater.error}</span>
-            {:else if updater.status === 'uptodate'}
-              <span class="hint">You are on the latest version.</span>
-            {:else if updater.status !== 'available' && updater.status !== 'downloading' && updater.status !== 'installing'}
-              <span class="hint">Manually check for and install app updates.</span>
-            {/if}
-          </div>
         {:else if activeTab === 'ai'}
           <div class="field">
             <label for="ollama-url">Ollama URL</label>
@@ -274,20 +226,6 @@ const tabItems = [
   }
   .hint.error {
     color: var(--error);
-  }
-  .update-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-  .update-body {
-    font-size: 11px;
-    color: var(--muted-2);
-    margin-top: 8px;
-    max-height: 120px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    line-height: 1.4;
   }
   .footer {
     display: flex;

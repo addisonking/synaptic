@@ -20,11 +20,11 @@ this script will:
 
 pushing a tag matching `v*.*.*` automatically triggers the **release** github actions workflow (`.github/workflows/release.yml`).
 
-it runs on `macos-latest` (apple silicon) and:
+it runs on `macos-latest` and:
 1. installs bun and rust
 2. installs frontend dependencies
-3. builds the tauri app for `aarch64-apple-darwin`
-4. creates a **draft** github release named "synaptic vX.Y.Z" with the `.dmg` and `.app` bundle attached
+3. builds the tauri app as a universal macos binary (`universal-apple-darwin`)
+4. creates a **draft** github release named "synaptic vX.Y.Z" with the `.dmg` bundle attached
 
 ## publishing the release
 
@@ -40,6 +40,6 @@ if you create a new release from the tag before the workflow finishes, that rele
 ## notes
 
 - no code signing is configured
-- only macos arm64 builds are produced
+- only universal macos builds are produced
 - make sure your working directory is clean before running `bun run release`
 - the script exits with an error if there are uncommitted changes
