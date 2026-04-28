@@ -177,6 +177,12 @@ export function renderMarkdown(content: string): string {
 				.replace(/&gt;/g, '>')
 				.replace(/&amp;/g, '&')
 				.replace(/&quot;/g, '"');
+
+			if (lang === 'mermaid') {
+				// keep entities encoded so the browser doesn't interpret < > as tags
+				return `<div class="mermaid">${code}</div>`;
+			}
+
 			const highlighted = highlightCode(decoded, lang);
 			return `<pre><code class="hljs language-${lang}">${highlighted}</code></pre>`;
 		},

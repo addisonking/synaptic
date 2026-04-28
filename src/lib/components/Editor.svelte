@@ -7,6 +7,7 @@ import type { BacklinkInfo } from '$lib/types';
 import 'katex/dist/katex.min.css';
 import 'highlight.js/styles/github-dark.min.css';
 import { ChevronDown, ChevronRight } from 'lucide-svelte';
+import mermaid from 'mermaid';
 
 let renderedHtml = $state('');
 let tags = $state<string[]>([]);
@@ -97,12 +98,22 @@ $effect(() => {
 });
 
 onMount(() => {
+	mermaid.initialize({ startOnLoad: false, theme: 'dark' });
 	if (appState.openFilePath) {
 		currentPath = appState.openFilePath;
 		render();
 	}
 	pollInterval = setInterval(checkForChanges, 500);
 	return () => clearInterval(pollInterval);
+});
+
+$effect(() => {
+	// run when renderedHtml updates and DOM has been written
+	if (renderedHtml && previewEl) {
+		requestAnimationFrame(() => {
+			mermaid.run({ nodes: previewEl.querySelectorAll('.mermaid') });
+		});
+	}
 });
 
 async function onPreviewClick(e: MouseEvent) {
@@ -329,6 +340,10 @@ async function onPreviewClick(e: MouseEvent) {
   .preview :global(img) {
     max-width: 100%;
     height: auto;
+  }
+
+  .preview :global(.mermaid svg) {
+    max-width: 100%;
   }
 
   .preview :global(.katex) {
