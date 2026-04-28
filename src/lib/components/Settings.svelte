@@ -196,9 +196,9 @@ const tabItems = [
 <style>
   .content {
     width: 520px;
-    max-height: 80vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
   .tab-panel {
     padding: 20px;
