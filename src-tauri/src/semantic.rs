@@ -299,9 +299,12 @@ pub async fn test_ollama_connection(
     let url = settings
         .ollama_url
         .unwrap_or_else(|| "http://localhost:11434".to_string());
-    let model = settings
+    let embed_model = settings
         .ollama_model
         .unwrap_or_else(|| "nomic-embed-text".to_string());
+    let gen_model = settings
+        .generation_model
+        .unwrap_or_else(|| "gemma4:26b".to_string());
 
     let client = http_client();
 
@@ -321,7 +324,7 @@ pub async fn test_ollama_connection(
                 });
             }
 
-            // 2. Check if model exists
+            // 2. Check if models exist
             #[derive(Deserialize)]
             struct TagEntry {
                 name: String,
@@ -332,26 +335,42 @@ pub async fn test_ollama_connection(
             }
 
             let tags: TagsResponse = res.json().await.map_err(|e| e.to_string())?;
-            let model_found = tags.models.iter().any(|m| {
-                m.name == model || m.name == format!("{}:latest", model) || m.name.starts_with(&format!("{}:", model))
-            });
 
-            if model_found {
-                Ok(OllamaHealth {
-                    reachable: true,
-                    model_available: true,
-                    message: format!("Connected. Model '{}' is available.", model),
+            let model_found = |name: &str| {
+                tags.models.iter().any(|m| {
+                    m.name == name
+                        || m.name == format!("{}:latest", name)
+                        || m.name.starts_with(&format!("{}:", name))
                 })
-            } else {
-                Ok(OllamaHealth {
-                    reachable: true,
-                    model_available: false,
-                    message: format!(
-                        "Ollama is reachable, but model '{}' was not found. Run: ollama pull {}",
-                        model, model
-                    ),
-                })
-            }
+            };
+
+            let embed_found = model_found(&embed_model);
+            let gen_found = model_found(&gen_model);
+
+            let message = match (embed_found, gen_found) {
+                (true, true) => format!(
+                    "Connected. Embedding model '{}' and generation model '{}' are available.",
+                    embed_model, gen_model
+                ),
+                (true, false) => format!(
+                    "Connected. Embedding model '{}' is available, but generation model '{}' was not found. Run: ollama pull {}",
+                    embed_model, gen_model, gen_model
+                ),
+                (false, true) => format!(
+                    "Connected. Generation model '{}' is available, but embedding model '{}' was not found. Run: ollama pull {}",
+                    gen_model, embed_model, embed_model
+                ),
+                (false, false) => format!(
+                    "Ollama is reachable, but neither model was found. Run: ollama pull {} && ollama pull {}",
+                    embed_model, gen_model
+                ),
+            };
+
+            Ok(OllamaHealth {
+                reachable: true,
+                model_available: embed_found && gen_found,
+                message,
+            })
         }
         Err(e) => {
             let msg = if e.is_connect() || e.is_request() {
