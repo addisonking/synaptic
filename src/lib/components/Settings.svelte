@@ -122,15 +122,15 @@ const tabItems = [
           </div>
 
           <div class="field">
-            <label for="ghost-model">Ghost Link Model</label>
+            <label for="generation-model">Generation Model</label>
             <Input
-              id="ghost-model"
+              id="generation-model"
               type="text"
               placeholder="gemma4:26b"
-              bind:value={settings.ghost_model}
+              bind:value={settings.generation_model}
               onchange={saveSettings}
             />
-            <span class="hint">Model used to generate missing note content from unresolved wiki-links.</span>
+            <span class="hint">Model used for AI-generated content (e.g. scratch note titles).</span>
           </div>
 
           <div class="field">

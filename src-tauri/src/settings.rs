@@ -12,7 +12,7 @@ pub struct Settings {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ollama_model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ghost_model: Option<String>,
+    pub generation_model: Option<String>,
 }
 
 impl Default for Settings {
@@ -21,7 +21,7 @@ impl Default for Settings {
             nvim_path: None,
             ollama_url: Some("http://localhost:11434".to_string()),
             ollama_model: Some("nomic-embed-text".to_string()),
-            ghost_model: Some("gemma4:26b".to_string()),
+            generation_model: Some("gemma4:26b".to_string()),
         }
     }
 }
@@ -46,8 +46,8 @@ pub fn get_settings(app: &AppHandle) -> Result<Settings, std::io::Error> {
     if settings.ollama_model.is_none() {
         settings.ollama_model = Settings::default().ollama_model;
     }
-    if settings.ghost_model.is_none() {
-        settings.ghost_model = Settings::default().ghost_model;
+    if settings.generation_model.is_none() {
+        settings.generation_model = Settings::default().generation_model;
     }
     Ok(settings)
 }

@@ -5,7 +5,6 @@ import {
 	fileRead,
 	fileRename,
 	generateNoteTitle,
-	scanGhostLinks,
 	scratchCreate,
 	systemListRecent,
 	systemOpen,
@@ -15,7 +14,6 @@ import {
 import DependencyCheck from '$lib/components/DependencyCheck.svelte';
 import Editor from '$lib/components/Editor.svelte';
 import FindOrCreate from '$lib/components/FindOrCreate.svelte';
-import GhostLinks from '$lib/components/GhostLinks.svelte';
 import Graph from '$lib/components/Graph.svelte';
 import KeybindHelp from '$lib/components/KeybindHelp.svelte';
 import Landing from '$lib/components/Landing.svelte';
@@ -154,12 +152,6 @@ onMount(() => {
 				appState.showGraph = !appState.showGraph;
 				return;
 			}
-			if (e.key === 'G' || (e.key === 'g' && e.shiftKey)) {
-				e.preventDefault();
-				blurTerminal();
-				appState.showGhostLinks = !appState.showGhostLinks;
-				return;
-			}
 			if (e.key === '[') {
 				e.preventDefault();
 				goBack();
@@ -201,8 +193,7 @@ onMount(() => {
 				showScratchFinder ||
 				appState.showHelp ||
 				appState.showGraph ||
-				appState.showSettings ||
-				appState.showGhostLinks;
+				appState.showSettings;
 			showFindOrCreate = false;
 			showNewNote = false;
 			showSemanticSearch = false;
@@ -210,7 +201,6 @@ onMount(() => {
 			appState.showHelp = false;
 			appState.showGraph = false;
 			appState.showSettings = false;
-			appState.showGhostLinks = false;
 			if (hadDialog) {
 				nvimTerminalRef?.focus();
 			}
@@ -224,8 +214,7 @@ onMount(() => {
 			showSemanticSearch ||
 			showScratchFinder ||
 			appState.showHelp ||
-			appState.showSettings ||
-			appState.showGhostLinks
+			appState.showSettings
 		) {
 			return;
 		}
@@ -268,13 +257,6 @@ async function handleOpenVault(path: string) {
 		}
 	} catch {
 		// No last file or failed to read — that's fine
-	}
-	// Background scan for ghost links
-	try {
-		const ghosts = await scanGhostLinks(system.path);
-		appState.ghostLinkCount = ghosts.length;
-	} catch {
-		// Ignore scan errors on open
 	}
 }
 
@@ -366,17 +348,7 @@ async function handleCreateVault(parent: string, name: string) {
   <KeybindHelp onClose={() => appState.showHelp = false} />
 {/if}
 {#if appState.showGraph}
-  <Graph
-    onClose={() => appState.showGraph = false}
-    onCreateGhostNote={(name) => {
-      blurTerminal();
-      newNoteName = name;
-      showNewNote = true;
-    }}
-  />
-{/if}
-{#if appState.showGhostLinks}
-  <GhostLinks onClose={() => appState.showGhostLinks = false} />
+  <Graph onClose={() => appState.showGraph = false} />
 {/if}
 
 <style>

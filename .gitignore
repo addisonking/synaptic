@@ -29,4 +29,7 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Local install script
+scripts/install.sh
+
 

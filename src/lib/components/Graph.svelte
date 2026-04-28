@@ -6,10 +6,9 @@ import { appState, openFile } from '$lib/store.svelte';
 
 interface Props {
 	onClose: () => void;
-	onCreateGhostNote?: (name: string) => void;
 }
 
-let { onClose, onCreateGhostNote }: Props = $props();
+let { onClose }: Props = $props();
 
 let canvas: HTMLCanvasElement;
 let animFrame: number;
@@ -422,9 +421,6 @@ async function onMouseUp(_e: MouseEvent) {
 			const content = await fileRead(clickNode.path);
 			openFile(clickNode.path, content);
 			onClose();
-		} else if (onCreateGhostNote) {
-			onCreateGhostNote(clickNode.id);
-			onClose();
 		}
 	}
 	dragging = null;
@@ -531,9 +527,6 @@ async function openSelectedNode() {
 	if (selectedNode.path) {
 		const content = await fileRead(selectedNode.path);
 		openFile(selectedNode.path, content);
-		onClose();
-	} else if (onCreateGhostNote) {
-		onCreateGhostNote(selectedNode.id);
 		onClose();
 	}
 }

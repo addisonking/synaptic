@@ -59,14 +59,9 @@ async function handleDelete() {
     <button class="action-btn" onclick={onNewScratch} title="Scratch Note (⌘⇧N)">
       Scratch <span class="keyhint">⌘⇧N</span>
     </button>
-    <button class="action-btn" onclick={() => { onBlurTerminal?.(); appState.showGraph = true; }} title="Graph (⌘G)">
+	<button class="action-btn" onclick={() => { onBlurTerminal?.(); appState.showGraph = true; }} title="Graph (⌘G)">
       Graph <span class="keyhint">⌘G</span>
     </button>
-    {#if appState.ghostLinkCount > 0}
-      <button class="action-btn ghost-btn" onclick={() => { onBlurTerminal?.(); appState.showGhostLinks = true; }} title="Ghost Links (⌘⇧G)">
-        Ghosts <span class="ghost-badge">{appState.ghostLinkCount}</span>
-      </button>
-    {/if}
   </div>
 
   <div class="right">
@@ -189,21 +184,6 @@ async function handleDelete() {
     color: var(--error);
     border-color: var(--error);
     background: rgba(204, 68, 68, 0.1);
-  }
-
-  .ghost-btn {
-    position: relative;
-  }
-
-  .ghost-badge {
-    display: inline-block;
-    background: #3a2a1a;
-    color: #ccaa44;
-    font-size: 10px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    margin-left: 4px;
-    font-weight: 500;
   }
 
 </style>

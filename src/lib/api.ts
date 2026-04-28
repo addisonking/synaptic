@@ -4,9 +4,6 @@ import type {
 	BacklinkInfo,
 	DependencyStatus,
 	FileNode,
-	GhostLink,
-	GhostNotePreview,
-	GhostSource,
 	GraphData,
 	OllamaHealth,
 	ScratchEntry,
@@ -125,40 +122,6 @@ export function getSettings(): Promise<AppSettings> {
 
 export function setSettings(settings: AppSettings): Promise<void> {
 	return invoke('set_settings_cmd', { settings });
-}
-
-// Ghost Links
-export function scanGhostLinks(systemPath: string): Promise<GhostLink[]> {
-	return invoke('scan_ghost_links_cmd', { systemPath });
-}
-
-export function previewGhostNote(
-	systemPath: string,
-	target: string,
-	sources: GhostSource[],
-): Promise<GhostNotePreview> {
-	return invoke('preview_ghost_note_cmd', { systemPath, target, sources });
-}
-
-export function previewGhostNoteStream(
-	systemPath: string,
-	target: string,
-	sources: GhostSource[],
-	onChunk: Channel<{ kind: string; data: string }>,
-): Promise<void> {
-	return invoke('preview_ghost_note_stream_cmd', {
-		systemPath,
-		target,
-		sources,
-		onChunk,
-	});
-}
-
-export function createGhostNotes(
-	systemPath: string,
-	notes: GhostNotePreview[],
-): Promise<void> {
-	return invoke('create_ghost_notes_cmd', { systemPath, notes });
 }
 
 // PTY

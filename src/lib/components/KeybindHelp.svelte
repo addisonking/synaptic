@@ -21,7 +21,6 @@ const shortcuts = [
 	{ key: '⌘⇧N', action: 'New scratch note' },
 	{ key: '⌘⇧S', action: 'Search scratch notes' },
 	{ key: '⌘G', action: 'Toggle graph view' },
-	{ key: '⌘⇧G', action: 'Toggle ghost links' },
 	{ key: '⌘[', action: 'Go back in history' },
 	{ key: '⌘]', action: 'Go forward in history' },
 	{ key: '⌘= / ⌘-', action: 'Zoom in / out' },

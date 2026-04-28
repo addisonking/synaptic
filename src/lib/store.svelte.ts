@@ -20,11 +20,9 @@ export const appState = $state({
 	showGraph: false,
 	showHelp: false,
 	showSettings: false,
-	showGhostLinks: false,
 	sidebarVisible: true,
 	cursorLine: 1,
 	cursorLineActive: false,
-	ghostLinkCount: 0,
 });
 
 export function setSystem(system: SystemInfo | null) {

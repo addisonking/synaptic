@@ -14,12 +14,10 @@ mod indexer;
 mod settings;
 mod pty;
 mod semantic;
-mod ghost;
 
 use indexer::{build_index, get_backlinks, get_graph};
 use settings::{get_settings, set_settings, Settings};
 use pty::{pty_create, pty_write, pty_resize, pty_close, pty_cursor_line};
-use ghost::{scan_ghost_links_cmd, preview_ghost_note_cmd, preview_ghost_note_stream_cmd, create_ghost_notes_cmd};
 
 fn scratch_dir(vault_path: &str) -> PathBuf {
     Path::new(vault_path).join("scratch")
@@ -503,8 +501,7 @@ async fn generate_note_title(_system_path: String, path: String, app: AppHandle)
         .ollama_url
         .unwrap_or_else(|| "http://localhost:11434".to_string());
     let model = settings
-        .ghost_model
-        .or(settings.ollama_model)
+        .generation_model
         .unwrap_or_else(|| "gemma4:26b".to_string());
 
     #[derive(Serialize)]
@@ -718,10 +715,6 @@ fn main() {
             pty_resize,
             pty_cursor_line,
             pty_close,
-            scan_ghost_links_cmd,
-            preview_ghost_note_cmd,
-            preview_ghost_note_stream_cmd,
-            create_ghost_notes_cmd,
             check_dependencies_cmd,
         ])
         .run(tauri::generate_context!())

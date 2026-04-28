@@ -52,31 +52,13 @@ export interface AppSettings {
 	nvim_path?: string;
 	ollama_url?: string;
 	ollama_model?: string;
-	ghost_model?: string;
+	generation_model?: string;
 }
 
 export interface OllamaHealth {
 	reachable: boolean;
 	model_available: boolean;
 	message: string;
-}
-
-export interface GhostSource {
-	note_path: string;
-	note_name: string;
-	line: number;
-	context: string;
-	tags: string[];
-}
-
-export interface GhostLink {
-	target: string;
-	sources: GhostSource[];
-}
-
-export interface GhostNotePreview {
-	target: string;
-	content: string;
 }
 
 export interface DependencyStatus {
