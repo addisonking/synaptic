@@ -73,4 +73,5 @@ export interface DependencyStatus {
 export interface ScratchEntry {
 	name: string;
 	path: string;
+	modified: number;
 }

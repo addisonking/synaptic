@@ -6,10 +6,10 @@ import {
 	setSettings,
 	testOllamaConnection,
 } from '$lib/api';
-import { version as appVersion } from '../../../package.json';
 import { Button, Dialog, Input, Tabs } from '$lib/components/ui';
 import { appState } from '$lib/store.svelte';
 import type { AppSettings, OllamaHealth } from '$lib/types';
+import { version as appVersion } from '../../../package.json';
 
 interface Props {
 	onClose: () => void;

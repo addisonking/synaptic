@@ -463,6 +463,7 @@ fn scratch_create(system_path: String) -> Result<String, String> {
 pub struct ScratchEntry {
     pub name: String,
     pub path: String,
+    pub modified: i64,
 }
 
 #[tauri::command]
@@ -479,12 +480,19 @@ fn scratch_list(system_path: String) -> Result<Vec<ScratchEntry>, String> {
             continue;
         }
         let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+        let modified = fs::metadata(&path)
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
         entries.push(ScratchEntry {
             name,
             path: path.to_string_lossy().to_string(),
+            modified,
         });
     }
-    entries.sort_by(|a, b| b.name.cmp(&a.name));
+    entries.sort_by(|a, b| b.modified.cmp(&a.modified));
     Ok(entries)
 }
 
