@@ -10,5 +10,4 @@ Shortcuts:
   Cmd+P       Find or create note
   Cmd+Shift+P Semantic search
   Cmd+G       Graph view
-  Cmd+Shift+G Ghost links
   Cmd+N       New note
