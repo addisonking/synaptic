@@ -6,6 +6,7 @@ import {
 	setSettings,
 	testOllamaConnection,
 } from '$lib/api';
+import { version as appVersion } from '../../../package.json';
 import { Button, Dialog, Input, Tabs } from '$lib/components/ui';
 import { appState } from '$lib/store.svelte';
 import type { AppSettings, OllamaHealth } from '$lib/types';
@@ -181,6 +182,7 @@ const tabItems = [
     </Tabs>
 
     <div class="footer">
+      <span class="version">v{appVersion}</span>
       <span class="save-indicator" class:error={saveStatus === 'error'}>
         {#if saveStatus === 'saving'}
           Saving…
@@ -240,5 +242,9 @@ const tabItems = [
   }
   .save-indicator.error {
     color: var(--error);
+  }
+  .version {
+    font-size: 11px;
+    color: var(--muted-2);
   }
 </style>
