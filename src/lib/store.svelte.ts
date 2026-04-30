@@ -1,3 +1,4 @@
+import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { fileTree } from './api';
 import type { FileNode, SearchResult, SystemInfo } from './types';
 
@@ -91,11 +92,17 @@ export function goForward() {
 export function setZoom(zoom: number) {
 	appState.zoom = Math.max(50, Math.min(200, zoom));
 	localStorage.setItem('synaptic-zoom', String(appState.zoom));
+	getCurrentWebview()
+		.setZoom(appState.zoom / 100)
+		.catch(() => {});
 }
 
 export function loadZoom() {
 	const saved = localStorage.getItem('synaptic-zoom');
 	if (saved) {
 		appState.zoom = parseInt(saved, 10);
+		getCurrentWebview()
+			.setZoom(appState.zoom / 100)
+			.catch(() => {});
 	}
 }

@@ -1,13 +1,10 @@
 <script lang="ts">
+import { ChevronDown, ChevronRight } from 'lucide-svelte';
 import { onMount } from 'svelte';
 import { fileRead, findNote, getBacklinks } from '$lib/api';
 import { parseFrontmatter, renderMarkdown } from '$lib/markdown';
 import { appState, openFile } from '$lib/store.svelte';
 import type { BacklinkInfo } from '$lib/types';
-import 'katex/dist/katex.min.css';
-import 'highlight.js/styles/github-dark.min.css';
-import { ChevronDown, ChevronRight } from 'lucide-svelte';
-import mermaid from 'mermaid';
 
 let renderedHtml = $state('');
 let tags = $state<string[]>([]);
@@ -20,6 +17,17 @@ let pollInterval: ReturnType<typeof setInterval>;
 let currentPath: string | null = null;
 let totalLines = $state(1);
 let scrollRaf: number | null = null;
+
+let mermaidModule: typeof import('mermaid') | null = null;
+
+async function getMermaid() {
+	if (!mermaidModule) {
+		const mod = await import('mermaid');
+		mermaidModule = mod.default ?? mod;
+		mermaidModule.initialize({ startOnLoad: false, theme: 'dark' });
+	}
+	return mermaidModule;
+}
 
 function getTotalLines(content: string) {
 	return content.split('\n').length;
@@ -49,7 +57,7 @@ async function render() {
 		totalLines = getTotalLines(content);
 		const fm = parseFrontmatter(content);
 		tags = fm.tags;
-		renderedHtml = renderMarkdown(content);
+		renderedHtml = await renderMarkdown(content);
 
 		const noteName =
 			appState.openFilePath.split('/').pop()?.replace('.md', '') || '';
@@ -68,7 +76,7 @@ async function checkForChanges() {
 			totalLines = getTotalLines(content);
 			const fm = parseFrontmatter(content);
 			tags = fm.tags;
-			renderedHtml = renderMarkdown(content);
+			renderedHtml = await renderMarkdown(content);
 		}
 	} catch {
 		// ignore
@@ -98,7 +106,6 @@ $effect(() => {
 });
 
 onMount(() => {
-	mermaid.initialize({ startOnLoad: false, theme: 'dark' });
 	if (appState.openFilePath) {
 		currentPath = appState.openFilePath;
 		render();
@@ -110,7 +117,8 @@ onMount(() => {
 $effect(() => {
 	// run when renderedHtml updates and DOM has been written
 	if (renderedHtml && previewEl) {
-		requestAnimationFrame(() => {
+		requestAnimationFrame(async () => {
+			const mermaid = await getMermaid();
 			mermaid.run({ nodes: previewEl.querySelectorAll('.mermaid') });
 		});
 	}

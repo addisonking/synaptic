@@ -1,12 +1,11 @@
-import hljs from 'highlight.js';
-import katex from 'katex';
+import type { MarkedOptions } from 'marked';
 import { marked } from 'marked';
 
 // Configure marked
 marked.use({
 	gfm: true,
 	breaks: true,
-});
+} as MarkedOptions);
 
 // Wiki-link regex: [[Target]] or [[Target|Display]]
 const WIKI_LINK_RE = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
@@ -18,6 +17,32 @@ const DISPLAY_MATH_RE = /\$\$([\s\S]+?)\$\$/g;
 // Frontmatter regex: ---\n...\n--- at the very start
 const FRONTMATTER_RE = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/;
 
+// Lazy-loaded modules
+let katexModule: typeof import('katex') | null = null;
+let hljsModule: typeof import('highlight.js') | null = null;
+let cssInjected = false;
+
+async function injectMarkdownStyles() {
+	if (cssInjected) return;
+	cssInjected = true;
+	await import('katex/dist/katex.min.css');
+	await import('highlight.js/styles/github-dark.min.css');
+}
+
+async function getKatex() {
+	if (!katexModule) {
+		katexModule = (await import('katex')).default;
+	}
+	return katexModule;
+}
+
+async function getHljs() {
+	if (!hljsModule) {
+		hljsModule = (await import('highlight.js')).default;
+	}
+	return hljsModule;
+}
+
 function escapeHtml(text: string): string {
 	return text
 		.replace(/&/g, '&amp;')
@@ -26,8 +51,12 @@ function escapeHtml(text: string): string {
 		.replace(/"/g, '&quot;');
 }
 
-function renderKatex(latex: string, displayMode: boolean): string {
+async function renderKatex(
+	latex: string,
+	displayMode: boolean,
+): Promise<string> {
 	try {
+		const katex = await getKatex();
 		return katex.renderToString(latex, {
 			displayMode,
 			throwOnError: false,
@@ -38,7 +67,8 @@ function renderKatex(latex: string, displayMode: boolean): string {
 	}
 }
 
-function highlightCode(code: string, lang?: string): string {
+async function highlightCode(code: string, lang?: string): Promise<string> {
+	const hljs = await getHljs();
 	if (lang && hljs.getLanguage(lang)) {
 		try {
 			return hljs.highlight(code, { language: lang }).value;
@@ -126,7 +156,9 @@ export function parseFrontmatter(content: string): {
 	return { tags: Array.from(tags), body };
 }
 
-export function renderMarkdown(content: string): string {
+export async function renderMarkdown(content: string): Promise<string> {
+	await injectMarkdownStyles();
+
 	// 1. Strip frontmatter before processing
 	const { body } = parseFrontmatter(content);
 	let text = body;
@@ -157,47 +189,71 @@ export function renderMarkdown(content: string): string {
 	let html = marked.parse(text, { async: false }) as string;
 
 	// 6. Restore inline math
-	inlineMaths.forEach(({ placeholder, latex }) => {
-		html = html.replace(placeholder, renderKatex(latex, false));
-	});
+	for (const { placeholder, latex } of inlineMaths) {
+		html = html.replace(placeholder, await renderKatex(latex, false));
+	}
 
 	// 7. Restore display math
-	displayMaths.forEach(({ placeholder, latex }) => {
-		html = html.replace(placeholder, renderKatex(latex, true));
-	});
+	for (const { placeholder, latex } of displayMaths) {
+		html = html.replace(placeholder, await renderKatex(latex, true));
+	}
 
 	// 8. Syntax highlight code blocks
 	// marked wraps code in <pre><code class="language-xxx">...</code></pre>
-	html = html.replace(
-		/<pre><code class="language-([^"]+)">([\s\S]*?)<\/code><\/pre>/g,
-		(_, lang, code) => {
-			// Decode HTML entities in code
+	// We can't use String.replace with async callbacks, so find matches then replace.
+	const codeBlocks: { match: string; lang: string; code: string }[] = [];
+	const codeRegex =
+		/<pre><code class="language-([^"]+)">([\s\S]*?)<\/code><\/pre>/g;
+	let cm: RegExpExecArray | null = codeRegex.exec(html);
+	while (cm !== null) {
+		codeBlocks.push({ match: cm[0], lang: cm[1], code: cm[2] });
+		cm = codeRegex.exec(html);
+	}
+
+	const highlightedBlocks = await Promise.all(
+		codeBlocks.map(async ({ lang, code }) => {
+			if (lang === 'mermaid') {
+				// keep entities encoded so the browser doesn't interpret < > as tags
+				return `<div class="mermaid">${code}</div>`;
+			}
 			const decoded = code
 				.replace(/&lt;/g, '<')
 				.replace(/&gt;/g, '>')
 				.replace(/&amp;/g, '&')
 				.replace(/&quot;/g, '"');
-
-			if (lang === 'mermaid') {
-				// keep entities encoded so the browser doesn't interpret < > as tags
-				return `<div class="mermaid">${code}</div>`;
-			}
-
-			const highlighted = highlightCode(decoded, lang);
+			const highlighted = await highlightCode(decoded, lang);
 			return `<pre><code class="hljs language-${lang}">${highlighted}</code></pre>`;
-		},
+		}),
 	);
 
+	for (let i = 0; i < codeBlocks.length; i++) {
+		html = html.replace(codeBlocks[i].match, () => highlightedBlocks[i]);
+	}
+
 	// Also handle code blocks without language
-	html = html.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, (_, code) => {
-		const decoded = code
-			.replace(/&lt;/g, '<')
-			.replace(/&gt;/g, '>')
-			.replace(/&amp;/g, '&')
-			.replace(/&quot;/g, '"');
-		const highlighted = highlightCode(decoded, 'plaintext');
-		return `<pre><code class="hljs">${highlighted}</code></pre>`;
-	});
+	const plainBlocks: { match: string; code: string }[] = [];
+	const plainRegex = /<pre><code>([\s\S]*?)<\/code><\/pre>/g;
+	let pm: RegExpExecArray | null = plainRegex.exec(html);
+	while (pm !== null) {
+		plainBlocks.push({ match: pm[0], code: pm[1] });
+		pm = plainRegex.exec(html);
+	}
+
+	const highlightedPlain = await Promise.all(
+		plainBlocks.map(async ({ code }) => {
+			const decoded = code
+				.replace(/&lt;/g, '<')
+				.replace(/&gt;/g, '>')
+				.replace(/&amp;/g, '&')
+				.replace(/&quot;/g, '"');
+			const highlighted = await highlightCode(decoded, 'plaintext');
+			return `<pre><code class="hljs">${highlighted}</code></pre>`;
+		}),
+	);
+
+	for (let i = 0; i < plainBlocks.length; i++) {
+		html = html.replace(plainBlocks[i].match, () => highlightedPlain[i]);
+	}
 
 	return html;
 }

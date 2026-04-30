@@ -30,6 +30,7 @@ import {
 	loadZoom,
 	openFile,
 	refreshFileTree,
+	setZoom,
 } from '$lib/store.svelte';
 import type { DependencyStatus } from '$lib/types';
 
@@ -164,17 +165,17 @@ onMount(() => {
 			}
 			if (e.key === '=' || e.key === '+') {
 				e.preventDefault();
-				appState.zoom = Math.min(200, appState.zoom + 10);
+				setZoom(appState.zoom + 10);
 				return;
 			}
 			if (e.key === '-') {
 				e.preventDefault();
-				appState.zoom = Math.max(50, appState.zoom - 10);
+				setZoom(appState.zoom - 10);
 				return;
 			}
 			if (e.key === '0') {
 				e.preventDefault();
-				appState.zoom = 100;
+				setZoom(100);
 				return;
 			}
 			if (e.key === ',') {
@@ -272,7 +273,7 @@ async function handleCreateVault(parent: string, name: string) {
 }
 </script>
 
-<div class="app" style="zoom: {appState.zoom}%">
+<div class="app">
   {#if !depsReady}
     <div class="loading-screen">
       <p>Checking dependencies…</p>
