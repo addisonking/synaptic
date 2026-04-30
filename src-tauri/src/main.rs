@@ -90,10 +90,6 @@ fn vault_config_path(vault_path: &str) -> PathBuf {
     synaptic_dir(vault_path).join("config.json")
 }
 
-fn template_path(vault_path: &str) -> PathBuf {
-    synaptic_dir(vault_path).join("template.md")
-}
-
 #[allow(dead_code)]
 fn index_path(vault_path: &str) -> PathBuf {
     synaptic_dir(vault_path).join("index.json")
@@ -314,7 +310,11 @@ fn file_create(path: String) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let stem = Path::new(&path).file_stem().and_then(|s| s.to_str()).unwrap_or("Note");
-    fs::write(&path, format!("# {}\n\n", stem)).map_err(|e| e.to_string())
+    fs::write(
+        &path,
+        format!("---\ntags: []\n---\n\n# {}\n\n", stem),
+    )
+    .map_err(|e| e.to_string())
 }
 
 fn find_vault_root(file_path: &Path) -> Option<PathBuf> {
