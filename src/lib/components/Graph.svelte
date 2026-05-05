@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Search, X } from 'lucide-svelte';
 import { onDestroy, onMount } from 'svelte';
-import { fileRead, getGraph } from '$lib/api';
+import { fileCreate, fileRead, getGraph } from '$lib/api';
 import { appState, openFile } from '$lib/store.svelte';
 
 interface Props {
@@ -341,6 +341,15 @@ function draw() {
 			ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
 			ctx.fillStyle = fillColor;
 			ctx.fill();
+			if (!n.path) {
+				ctx.beginPath();
+				ctx.arc(n.x, n.y, r + 2, 0, Math.PI * 2);
+				ctx.strokeStyle = '#555555';
+				ctx.lineWidth = 1;
+				ctx.setLineDash([2, 2]);
+				ctx.stroke();
+				ctx.setLineDash([]);
+			}
 			if (isSelected) {
 				ctx.beginPath();
 				ctx.arc(n.x, n.y, r + 3, 0, Math.PI * 2);
@@ -491,6 +500,13 @@ async function onMouseUp(_e: MouseEvent) {
 		if (clickNode.path) {
 			const content = await fileRead(clickNode.path);
 			openFile(clickNode.path, content);
+			onClose();
+		} else if (appState.system && clickNode.kind !== 'tag') {
+			// Ghost node — create the note
+			const newPath = `${appState.system.path}/notes/${clickNode.id}.md`;
+			await fileCreate(newPath);
+			const content = await fileRead(newPath);
+			openFile(newPath, content);
 			onClose();
 		}
 	}
@@ -674,7 +690,7 @@ function onKeydown(e: KeyboardEvent) {
       onmouseup={onMouseUp}
       onwheel={onWheel}
     ></canvas>
-    <div class="graph-hint">scroll to zoom · drag to pan · click node to open · / to search</div>
+		<div class="graph-hint">scroll to zoom · drag to pan · click node to open · click ghost to create · / to search</div>
   </div>
 </div>
 
