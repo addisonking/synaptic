@@ -56,19 +56,35 @@ function stripExt(name: string) {
 	return name.replace(/\.md$/, '');
 }
 
+// "computer-science/principles" → "computer-science › principles"
+function formatTag(tag: string): string {
+	return tag.split('/').join(' › ');
+}
+
+// Format a pill relative to the current search prefix.
+// Exact match gets the full "#tag", subtags get "› remainder".
+function formatPill(tag: string, prefix: string): string {
+	if (tag === prefix || prefix === '') return `#${formatTag(tag)}`;
+	return `› ${formatTag(tag.slice(prefix.length + 1))}`;
+}
+
 const tagPrefix = $derived(
 	query.startsWith('#') ? query.slice(1).toLowerCase() : null,
+);
+
+const matchingTagEntries = $derived(
+	tagPrefix !== null
+		? allTags.filter((e) => tagPrefix === '' || e.tag.startsWith(tagPrefix))
+		: [],
 );
 
 const filtered = $derived(
 	(() => {
 		if (tagPrefix !== null) {
 			const matchingPaths = new Set<string>();
-			for (const entry of allTags) {
-				if (tagPrefix === '' || entry.tag.startsWith(tagPrefix)) {
-					for (const note of entry.notes) {
-						matchingPaths.add(note.path);
-					}
+			for (const entry of matchingTagEntries) {
+				for (const note of entry.notes) {
+					matchingPaths.add(note.path);
 				}
 			}
 			return flatFiles.filter((f) => matchingPaths.has(f.path));
@@ -80,20 +96,28 @@ const filtered = $derived(
 	})(),
 );
 
+// Map path → matched tag names, for per-note display
+const noteTagMap = $derived(
+	(() => {
+		const map = new Map<string, string[]>();
+		if (tagPrefix === null) return map;
+		for (const entry of matchingTagEntries) {
+			for (const note of entry.notes) {
+				const existing = map.get(note.path) ?? [];
+				existing.push(entry.tag);
+				map.set(note.path, existing);
+			}
+		}
+		return map;
+	})(),
+);
+
 const showCreate = $derived(
 	tagPrefix === null &&
 		query.trim() !== '' &&
 		!filtered.some(
 			(f) => stripExt(f.name).toLowerCase() === query.toLowerCase(),
 		),
-);
-
-const activeTagNames = $derived(
-	tagPrefix !== null
-		? allTags
-				.filter((e) => tagPrefix === '' || e.tag.startsWith(tagPrefix))
-				.map((e) => e.tag)
-		: [],
 );
 
 async function handleSelect(file?: { name: string; path: string }) {
@@ -131,22 +155,28 @@ function handleKeydown(e: KeyboardEvent) {
       onkeydown={handleKeydown}
       autofocus
     />
-    {#if tagPrefix !== null && activeTagNames.length > 0}
+    {#if tagPrefix !== null && matchingTagEntries.length > 0}
       <div class="tag-filter-bar">
-        {#each activeTagNames as tag}
-          <span class="tag-pill">#{tag}</span>
+        {#each matchingTagEntries as entry}
+          <span class="tag-pill">{formatPill(entry.tag, tagPrefix)}</span>
         {/each}
         <span class="tag-count">{filtered.length} notes</span>
       </div>
     {/if}
     <Command.List class="cmd-list">
       {#each filtered as file}
+        {@const matchedTags = noteTagMap.get(file.path) ?? []}
         <Command.Item
           class="cmd-item"
           value={file.path}
           onSelect={() => handleSelect(file)}
         >
           <span class="result-name">{stripExt(file.name)}</span>
+          {#if tagPrefix !== null && matchedTags.length > 0}
+            <span class="result-tag-path">
+              {matchedTags.map(formatTag).join(' · ')}
+            </span>
+          {/if}
         </Command.Item>
       {/each}
       {#if showCreate}
@@ -173,8 +203,27 @@ function handleKeydown(e: KeyboardEvent) {
     width: 560px;
   }
 
+  :global(.cmd-item) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
   .result-name {
     color: var(--text-bright);
+    flex-shrink: 0;
+  }
+
+  .result-tag-path {
+    font-size: 11px;
+    color: #2a6060;
+    font-family: var(--font);
+    text-align: right;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .tag-filter-bar {
