@@ -158,7 +158,7 @@ function handleKeydown(e: KeyboardEvent) {
     {#if tagPrefix !== null && matchingTagEntries.length > 0}
       <div class="tag-filter-bar">
         {#each matchingTagEntries as entry}
-          <span class="tag-pill">{formatPill(entry.tag, tagPrefix)}</span>
+          <button class="tag-pill" onclick={() => { query = `#${entry.tag}`; }}>{formatPill(entry.tag, tagPrefix)}</button>
         {/each}
         <span class="tag-count">{filtered.length} notes</span>
       </div>
@@ -243,6 +243,13 @@ function handleKeydown(e: KeyboardEvent) {
     border: 1px solid #2a5a5a;
     border-radius: 2px;
     font-family: var(--font);
+    cursor: pointer;
+    transition: background 80ms, border-color 80ms;
+  }
+
+  .tag-pill:hover {
+    background: #1e4a4a;
+    border-color: #3a7a7a;
   }
 
   .tag-count {
