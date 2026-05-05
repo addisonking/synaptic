@@ -18,11 +18,7 @@
     "@sveltejs/kit": "^2.20.7",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tauri-apps/cli": "^2.5.0",
-    "@types/jsdom": "^28.0.1",
     "@types/katex": "^0.16.8",
-    "@types/marked": "^6.0.0",
-    "jsdom": "^29.1.0",
-    "playwright": "^1.59.1",
     "svelte": "^5.28.2",
     "svelte-check": "^4.2.1",
     "typescript": "~5.8.3",
@@ -31,15 +27,12 @@
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-dialog": "^2.2.1",
-    "@tauri-apps/plugin-fs": "^2.2.1",
-    "@tauri-apps/plugin-shell": "^2.2.1",
     "@xterm/xterm": "^5.5.0",
     "bits-ui": "^2.18.0",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.45",
     "lucide-svelte": "^1.0.1",
     "marked": "^18.0.2",
-    "mermaid": "^11.14.0",
-    "runed": "^0.37.1"
+    "mermaid": "^11.14.0"
   }
 }
