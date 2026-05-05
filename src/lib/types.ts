@@ -28,6 +28,18 @@ export interface GraphNode {
 	id: string;
 	path: string;
 	link_count: number;
+	kind?: string;
+}
+
+export interface TagNote {
+	name: string;
+	path: string;
+}
+
+export interface TagEntry {
+	tag: string;
+	count: number;
+	notes: TagNote[];
 }
 
 export interface GraphEdge {

@@ -15,7 +15,7 @@ mod settings;
 mod pty;
 mod semantic;
 
-use indexer::{build_index, get_backlinks, get_graph};
+use indexer::{build_index, get_backlinks, get_graph, get_tags};
 use settings::{get_settings, set_settings, Settings};
 use pty::{pty_create, pty_write, pty_resize, pty_close, pty_cursor_line};
 
@@ -445,6 +445,11 @@ fn get_graph_cmd(system_path: String) -> Result<indexer::GraphData, String> {
     get_graph(&system_path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn get_tags_cmd(system_path: String) -> Result<Vec<indexer::TagEntry>, String> {
+    get_tags(&system_path).map_err(|e| e.to_string())
+}
+
 // ─── Scratch Notes ───────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -709,6 +714,7 @@ fn main() {
             index_rebuild,
             get_backlinks_cmd,
             get_graph_cmd,
+            get_tags_cmd,
             find_note,
             scratch_create,
             scratch_list,

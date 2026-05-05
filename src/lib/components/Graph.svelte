@@ -18,6 +18,7 @@ interface SimNode {
 	id: string;
 	path: string;
 	link_count: number;
+	kind: string;
 	x: number;
 	y: number;
 	vx: number;
@@ -38,6 +39,7 @@ let nodeMap = new Map<string, SimNode>();
 let connectedIds = new Set<string>();
 
 let showOrphans = $state(true);
+let showTags = $state(true);
 
 // Search
 let searchQuery = $state('');
@@ -76,13 +78,15 @@ onMount(async () => {
 	nodes = data.nodes.map((n, i) => {
 		const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
 		const r = radius * (0.7 + Math.random() * 0.3);
+		const kind = n.kind ?? 'note';
 		return {
 			...n,
+			kind,
 			x: cx + Math.cos(angle) * r,
 			y: cy + Math.sin(angle) * r,
 			vx: 0,
 			vy: 0,
-			r: nodeRadius(n.link_count),
+			r: kind === 'tag' ? tagRadius(n.link_count) : nodeRadius(n.link_count),
 		};
 	});
 	nodeMap = new Map(nodes.map((n) => [n.id, n]));
@@ -114,6 +118,14 @@ onDestroy(() => {
 
 function nodeRadius(linkCount: number) {
 	return 4 + Math.sqrt(linkCount) * 2.5;
+}
+
+function tagRadius(noteCount: number) {
+	return 3 + Math.sqrt(noteCount) * 1.8;
+}
+
+function isTagEdge(e: SimEdge) {
+	return e.source.startsWith('#') || e.target.startsWith('#');
 }
 
 // Continuous simulation with cooling
@@ -222,6 +234,9 @@ function draw() {
 		const a = e.a,
 			b = e.b;
 		if (!a || !b) continue;
+		const tagEdge = isTagEdge(e);
+		if (tagEdge && !showTags) continue;
+
 		const isNeighborEdge =
 			hasHover &&
 			(e.source === hoveredNode?.id || e.target === hoveredNode?.id);
@@ -234,60 +249,100 @@ function draw() {
 		ctx.moveTo(a.x, a.y);
 		ctx.lineTo(b.x, b.y);
 
-		if (hasSelection) {
-			if (isSelectedEdge) {
-				ctx.strokeStyle = '#555544';
-				ctx.lineWidth = 2;
-			} else if (hasHover && isNeighborEdge) {
-				ctx.strokeStyle = '#444444';
-				ctx.lineWidth = 1.5;
+		if (tagEdge) {
+			ctx.setLineDash([3, 4]);
+			if (isNeighborEdge || isSelectedEdge) {
+				ctx.strokeStyle = '#2a6060';
+				ctx.lineWidth = 1;
 			} else {
-				ctx.strokeStyle = '#0f0f0f';
-				ctx.lineWidth = 0.5;
+				ctx.strokeStyle = '#182828';
+				ctx.lineWidth = 0.8;
 			}
-		} else if (hasHover) {
-			ctx.strokeStyle = isNeighborEdge ? '#444444' : '#0f0f0f';
-			ctx.lineWidth = isNeighborEdge ? 1.5 : 0.5;
 		} else {
-			ctx.strokeStyle = isCurEdge ? '#333333' : '#1c1c1c';
-			ctx.lineWidth = isCurEdge ? 1.5 : 1;
+			ctx.setLineDash([]);
+			if (hasSelection) {
+				if (isSelectedEdge) {
+					ctx.strokeStyle = '#555544';
+					ctx.lineWidth = 2;
+				} else if (hasHover && isNeighborEdge) {
+					ctx.strokeStyle = '#444444';
+					ctx.lineWidth = 1.5;
+				} else {
+					ctx.strokeStyle = '#0f0f0f';
+					ctx.lineWidth = 0.5;
+				}
+			} else if (hasHover) {
+				ctx.strokeStyle = isNeighborEdge ? '#444444' : '#0f0f0f';
+				ctx.lineWidth = isNeighborEdge ? 1.5 : 0.5;
+			} else {
+				ctx.strokeStyle = isCurEdge ? '#333333' : '#1c1c1c';
+				ctx.lineWidth = isCurEdge ? 1.5 : 1;
+			}
 		}
 		ctx.stroke();
+		ctx.setLineDash([]);
 	}
 
 	// Nodes
 	for (const n of nodes) {
-		if (!showOrphans && !connectedIds.has(n.id)) continue;
+		const isTag = n.kind === 'tag';
+		if (isTag && !showTags) continue;
+		if (!showOrphans && !connectedIds.has(n.id) && !isTag) continue;
+
 		const isCurrent = n.id === currentName;
 		const isHovered = n === hoveredNode;
 		const isNeighbor = neighborIds.has(n.id);
 		const isSelected = n === selectedNode;
 		const isSelectedNeighbor = selectedNeighborIds.has(n.id);
+		const r = n.r / scale;
 
 		let fillColor: string;
-		if (isSelected) fillColor = '#ccaa44';
-		else if (isCurrent) fillColor = '#ffffff';
-		else if (isHovered) fillColor = '#cccccc';
-		else if (hasHover && isNeighbor) fillColor = '#888888';
-		else if (hasHover) fillColor = '#1a1a1a';
-		else if (hasSelection && isSelectedNeighbor) fillColor = '#666666';
-		else if (hasSelection && !isSelectedNeighbor) fillColor = '#1a1a1a';
-		else if (n.link_count > 5) fillColor = '#666666';
-		else if (n.link_count > 0) fillColor = '#444444';
-		else fillColor = '#2a2a2a';
+		if (isTag) {
+			if (isSelected) fillColor = '#3a9a9a';
+			else if (isHovered) fillColor = '#2a7070';
+			else if (isNeighbor && hasHover) fillColor = '#224444';
+			else if (isSelectedNeighbor) fillColor = '#1e4040';
+			else fillColor = '#162e2e';
+		} else {
+			if (isSelected) fillColor = '#ccaa44';
+			else if (isCurrent) fillColor = '#ffffff';
+			else if (isHovered) fillColor = '#cccccc';
+			else if (hasHover && isNeighbor) fillColor = '#888888';
+			else if (hasHover) fillColor = '#1a1a1a';
+			else if (hasSelection && isSelectedNeighbor) fillColor = '#666666';
+			else if (hasSelection && !isSelectedNeighbor) fillColor = '#1a1a1a';
+			else if (n.link_count > 5) fillColor = '#666666';
+			else if (n.link_count > 0) fillColor = '#444444';
+			else fillColor = '#2a2a2a';
+		}
 
-		ctx.beginPath();
-		ctx.arc(n.x, n.y, n.r / scale, 0, Math.PI * 2);
-		ctx.fillStyle = fillColor;
-		ctx.fill();
-
-		// Selected ring
-		if (isSelected) {
+		if (isTag) {
+			// Diamond shape
 			ctx.beginPath();
-			ctx.arc(n.x, n.y, n.r / scale + 3, 0, Math.PI * 2);
-			ctx.strokeStyle = '#ccaa44';
-			ctx.lineWidth = 1.5;
-			ctx.stroke();
+			ctx.moveTo(n.x, n.y - r * 1.3);
+			ctx.lineTo(n.x + r, n.y);
+			ctx.lineTo(n.x, n.y + r * 1.3);
+			ctx.lineTo(n.x - r, n.y);
+			ctx.closePath();
+			ctx.fillStyle = fillColor;
+			ctx.fill();
+			if (isSelected || isHovered) {
+				ctx.strokeStyle = isSelected ? '#3a9a9a' : '#2a6060';
+				ctx.lineWidth = 1;
+				ctx.stroke();
+			}
+		} else {
+			ctx.beginPath();
+			ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+			ctx.fillStyle = fillColor;
+			ctx.fill();
+			if (isSelected) {
+				ctx.beginPath();
+				ctx.arc(n.x, n.y, r + 3, 0, Math.PI * 2);
+				ctx.strokeStyle = '#ccaa44';
+				ctx.lineWidth = 1.5;
+				ctx.stroke();
+			}
 		}
 	}
 
@@ -296,7 +351,10 @@ function draw() {
 	ctx.textBaseline = 'middle';
 
 	for (const n of nodes) {
-		if (!showOrphans && !connectedIds.has(n.id)) continue;
+		const isTag = n.kind === 'tag';
+		if (isTag && !showTags) continue;
+		if (!showOrphans && !connectedIds.has(n.id) && !isTag) continue;
+
 		const isCurrent = n.id === currentName;
 		const isHovered = n === hoveredNode;
 		const isNeighbor = neighborIds.has(n.id);
@@ -319,11 +377,18 @@ function draw() {
 		const fontSize = Math.max(9, 11 / scale);
 		ctx.font = `${isCurrent || isSelected ? 600 : 400} ${fontSize}px "Geist Mono", monospace`;
 
-		if (dimmed) ctx.fillStyle = '#222222';
-		else if (isSelected) ctx.fillStyle = '#ccaa44';
-		else if (isCurrent || isHovered) ctx.fillStyle = '#ffffff';
-		else if (isNeighbor || isSelectedNeighbor) ctx.fillStyle = '#888888';
-		else ctx.fillStyle = '#555555';
+		if (isTag) {
+			if (dimmed) ctx.fillStyle = '#1a3030';
+			else if (isSelected || isHovered) ctx.fillStyle = '#3a9a9a';
+			else if (isNeighbor || isSelectedNeighbor) ctx.fillStyle = '#2a6060';
+			else ctx.fillStyle = '#254545';
+		} else {
+			if (dimmed) ctx.fillStyle = '#222222';
+			else if (isSelected) ctx.fillStyle = '#ccaa44';
+			else if (isCurrent || isHovered) ctx.fillStyle = '#ffffff';
+			else if (isNeighbor || isSelectedNeighbor) ctx.fillStyle = '#888888';
+			else ctx.fillStyle = '#555555';
+		}
 
 		const r = n.r / scale;
 		ctx.fillText(n.id, n.x + r + 4 / scale, n.y);
@@ -363,7 +428,8 @@ function hitTest(clientX: number, clientY: number): SimNode | null {
 	const { x, y } = toWorld(clientX, clientY);
 	for (let i = nodes.length - 1; i >= 0; i--) {
 		const n = nodes[i];
-		if (!showOrphans && !connectedIds.has(n.id)) continue;
+		if (n.kind === 'tag' && !showTags) continue;
+		if (!showOrphans && !connectedIds.has(n.id) && n.kind !== 'tag') continue;
 		const r = n.r / scale + 4 / scale;
 		if ((n.x - x) ** 2 + (n.y - y) ** 2 <= r * r) return n;
 	}
@@ -560,7 +626,18 @@ function onKeydown(e: KeyboardEvent) {
   <div class="graph-panel">
     <div class="graph-header">
       <span class="graph-title">graph</span>
-      <span class="graph-meta">{nodes.length} notes · {edges.length} links</span>
+      <span class="graph-meta">
+        {nodes.filter(n => n.kind !== 'tag').length} notes
+        · {nodes.filter(n => n.kind === 'tag').length} tags
+        · {edges.filter(e => !isTagEdge(e)).length} links
+      </span>
+
+      <button
+        class="tag-toggle"
+        class:active={showTags}
+        onclick={() => { showTags = !showTags; ensureLoop(); }}
+        title="Toggle tag nodes"
+      >tags</button>
 
       <div class="graph-search-wrap">
         <div class="graph-search">
@@ -668,6 +745,28 @@ function onKeydown(e: KeyboardEvent) {
   .icon-btn {
     padding: 4px 8px;
     font-size: 13px;
+  }
+
+  .tag-toggle {
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--muted-3);
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    transition: color 80ms, border-color 80ms, background 80ms;
+    margin-right: 8px;
+  }
+
+  .tag-toggle:hover {
+    color: #3a9a9a;
+    border-color: #1a3a3a;
+  }
+
+  .tag-toggle.active {
+    color: #3a9a9a;
+    border-color: #1e4040;
+    background: #0e1e1e;
   }
 
   .close-btn {

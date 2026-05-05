@@ -10,6 +10,7 @@ import type {
 	SearchResult,
 	SemanticResult,
 	SystemInfo,
+	TagEntry,
 } from './types';
 
 // Vault lifecycle
@@ -86,6 +87,10 @@ export function getBacklinks(
 
 export function getGraph(systemPath: string): Promise<GraphData> {
 	return invoke('get_graph_cmd', { systemPath });
+}
+
+export function getTags(systemPath: string): Promise<TagEntry[]> {
+	return invoke('get_tags_cmd', { systemPath });
 }
 
 export function findNote(
