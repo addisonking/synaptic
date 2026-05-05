@@ -5,6 +5,7 @@ import type { FileNode, SearchResult, SystemInfo } from './types';
 // Global application state using Svelte 5 runes
 export const appState = $state({
 	system: null as SystemInfo | null,
+	ollamaAvailable: true,
 	recentSystems: [] as SystemInfo[],
 	fileTree: [] as FileNode[],
 	openFilePath: null as string | null,

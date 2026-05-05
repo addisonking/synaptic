@@ -101,7 +101,8 @@ onMount(() => {
 		.then((status) => {
 			depsStatus = status;
 			depsReady = true;
-			if (status.neovim_installed && status.ollama_running) {
+			appState.ollamaAvailable = status.ollama_running;
+			if (status.neovim_installed) {
 				depsSatisfied = true;
 				systemListRecent().then((recents) => {
 					appState.recentSystems = recents;
@@ -240,7 +241,8 @@ onMount(() => {
 
 async function handleOpenVault(path: string) {
 	const status = await checkDependencies();
-	if (!status.neovim_installed || !status.ollama_running) {
+	appState.ollamaAvailable = status.ollama_running;
+	if (!status.neovim_installed) {
 		depsStatus = status;
 		depsSatisfied = false;
 		return;
@@ -263,7 +265,8 @@ async function handleOpenVault(path: string) {
 
 async function handleCreateVault(parent: string, name: string) {
 	const status = await checkDependencies();
-	if (!status.neovim_installed || !status.ollama_running) {
+	appState.ollamaAvailable = status.ollama_running;
+	if (!status.neovim_installed) {
 		depsStatus = status;
 		depsSatisfied = false;
 		return;

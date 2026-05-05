@@ -73,6 +73,14 @@ function formatScore(score: number) {
 </script>
 
 <Dialog bind:open position="top" contentClass="search-dialog" showClose={false}>
+  {#if !appState.ollamaAvailable}
+    <div class="ollama-unavailable">
+      <p class="unavailable-title">Ollama not running</p>
+      <p class="unavailable-body">
+        Semantic search requires Ollama. Start it with <code>ollama serve</code> and reopen the vault.
+      </p>
+    </div>
+  {:else}
   <Command.Root shouldFilter={false} class="cmd-root">
     <Command.Input
       class="cmd-input"
@@ -106,6 +114,7 @@ function formatScore(score: number) {
       {/if}
     </Command.List>
   </Command.Root>
+  {/if}
 </Dialog>
 
 <style>
@@ -133,5 +142,31 @@ function formatScore(score: number) {
   }
   :global(.cmd-empty.error) {
     color: var(--error);
+  }
+
+  .ollama-unavailable {
+    padding: 24px 20px;
+  }
+
+  .unavailable-title {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: var(--text-bright);
+    font-weight: 500;
+  }
+
+  .unavailable-body {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted-2);
+    line-height: 1.5;
+  }
+
+  .unavailable-body code {
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--font);
+    color: var(--text-bright);
   }
 </style>
