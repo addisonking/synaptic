@@ -366,6 +366,64 @@ fn file_rename(old_path: String, new_path: String) -> Result<(), String> {
     fs::rename(&old_path, &new_path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn rename_note(system_path: String, old_path: String, new_name: String) -> Result<String, String> {
+    use regex::Regex;
+
+    let old = Path::new(&old_path);
+    let old_stem = old
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or("Invalid path")?;
+
+    let new_name = new_name.trim().trim_end_matches(".md");
+    if new_name.is_empty() {
+        return Err("Name cannot be empty".to_string());
+    }
+
+    let new_path = old.with_file_name(format!("{}.md", new_name));
+    if new_path.exists() && new_path != old {
+        return Err(format!("A note named '{}' already exists", new_name));
+    }
+
+    // Rewrite [[old-stem]] and [[old-stem|display]] across the vault
+    let escaped = regex::escape(old_stem);
+    let pattern = format!(r"(?i)\[\[{}(?:\.md)?(\|[^\]]+)?\]\]", escaped);
+    let re = Regex::new(&pattern).map_err(|e| e.to_string())?;
+
+    for entry in WalkDir::new(&system_path)
+        .into_iter()
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            !name.starts_with('.') && !name.ends_with("~")
+        })
+        .filter_map(|e| e.ok())
+    {
+        let path = entry.path();
+        if !path.is_file() || path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let content = match fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let rewritten = re.replace_all(&content, |caps: &regex::Captures| {
+            match caps.get(1) {
+                Some(display) => format!("[[{}{}]]", new_name, display.as_str()),
+                None => format!("[[{}]]", new_name),
+            }
+        });
+        if rewritten != content {
+            fs::write(path, rewritten.as_ref()).map_err(|e| e.to_string())?;
+        }
+    }
+
+    fs::rename(&old_path, &new_path).map_err(|e| e.to_string())?;
+    build_index(&system_path).map_err(|e| e.to_string())?;
+
+    Ok(new_path.to_string_lossy().to_string())
+}
+
 // ─── Search ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -710,6 +768,7 @@ fn main() {
             file_create,
             file_delete,
             file_rename,
+            rename_note,
             search,
             index_rebuild,
             get_backlinks_cmd,

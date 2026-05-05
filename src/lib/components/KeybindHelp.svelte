@@ -18,6 +18,7 @@ const shortcuts = [
 	{ key: '⌘P', action: 'Find or create note' },
 	{ key: '⌘⇧P', action: 'Semantic search' },
 	{ key: '⌘N', action: 'New note' },
+	{ key: '⌘R', action: 'Rename current note' },
 	{ key: '⌘⇧N', action: 'New scratch note' },
 	{ key: '⌘⇧S', action: 'Search scratch notes' },
 	{ key: '⌘G', action: 'Toggle graph view' },

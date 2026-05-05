@@ -19,6 +19,7 @@ import KeybindHelp from '$lib/components/KeybindHelp.svelte';
 import Landing from '$lib/components/Landing.svelte';
 import NewNote from '$lib/components/NewNote.svelte';
 import NvimTerminal from '$lib/components/NvimTerminal.svelte';
+import RenameNote from '$lib/components/RenameNote.svelte';
 import ScratchFinder from '$lib/components/ScratchFinder.svelte';
 import SemanticSearch from '$lib/components/SemanticSearch.svelte';
 import Settings from '$lib/components/Settings.svelte';
@@ -36,6 +37,7 @@ import type { DependencyStatus } from '$lib/types';
 
 let showFindOrCreate = $state(false);
 let showNewNote = $state(false);
+let showRenameNote = $state(false);
 let showSemanticSearch = $state(false);
 let showScratchFinder = $state(false);
 let newNoteName = $state('');
@@ -137,6 +139,12 @@ onMount(() => {
 				showNewNote = true;
 				return;
 			}
+			if (e.key === 'r' && !e.shiftKey && appState.openFilePath) {
+				e.preventDefault();
+				blurTerminal();
+				showRenameNote = true;
+				return;
+			}
 			if (e.key === 'N' || (e.key === 'n' && e.shiftKey)) {
 				e.preventDefault();
 				createScratchNote();
@@ -191,6 +199,7 @@ onMount(() => {
 			const hadDialog =
 				showFindOrCreate ||
 				showNewNote ||
+				showRenameNote ||
 				showSemanticSearch ||
 				showScratchFinder ||
 				appState.showHelp ||
@@ -198,6 +207,7 @@ onMount(() => {
 				appState.showSettings;
 			showFindOrCreate = false;
 			showNewNote = false;
+			showRenameNote = false;
 			showSemanticSearch = false;
 			showScratchFinder = false;
 			appState.showHelp = false;
@@ -213,6 +223,7 @@ onMount(() => {
 		if (
 			showFindOrCreate ||
 			showNewNote ||
+			showRenameNote ||
 			showSemanticSearch ||
 			showScratchFinder ||
 			appState.showHelp ||
@@ -338,6 +349,9 @@ async function handleCreateVault(parent: string, name: string) {
 {/if}
 {#if showNewNote}
   <NewNote onClose={() => showNewNote = false} initialName={newNoteName} />
+{/if}
+{#if showRenameNote}
+  <RenameNote onClose={() => showRenameNote = false} />
 {/if}
 {#if showSemanticSearch}
   <SemanticSearch onClose={() => showSemanticSearch = false} />

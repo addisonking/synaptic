@@ -65,6 +65,14 @@ export function fileRename(oldPath: string, newPath: string): Promise<void> {
 	return invoke('file_rename', { oldPath, newPath });
 }
 
+export function renameNote(
+	systemPath: string,
+	oldPath: string,
+	newName: string,
+): Promise<string> {
+	return invoke('rename_note', { systemPath, oldPath, newName });
+}
+
 // Search
 export function search(
 	systemPath: string,
