@@ -1,7 +1,14 @@
 <script lang="ts">
+import { listen } from '@tauri-apps/api/event';
 import { ChevronDown, ChevronRight } from 'lucide-svelte';
 import { onMount } from 'svelte';
-import { fileRead, findNote, getBacklinks } from '$lib/api';
+import {
+	fileRead,
+	findNote,
+	getBacklinks,
+	unwatchFile,
+	watchFile,
+} from '$lib/api';
 import { parseFrontmatter, renderMarkdown } from '$lib/markdown';
 import { appState, openFile } from '$lib/store.svelte';
 import type { BacklinkInfo } from '$lib/types';
@@ -13,10 +20,10 @@ let backlinksCollapsed = $state(true);
 let previewEl = $state<HTMLDivElement | null>(null);
 
 let lastContent = $state('');
-let pollInterval: ReturnType<typeof setInterval>;
 let currentPath: string | null = null;
 let totalLines = $state(1);
 let scrollRaf: number | null = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 let mermaidModule: typeof import('mermaid') | null = null;
 
@@ -86,6 +93,7 @@ async function checkForChanges() {
 $effect(() => {
 	const path = appState.openFilePath;
 	if (path && path !== currentPath) {
+		if (currentPath) unwatchFile(currentPath).catch(() => {});
 		currentPath = path;
 		lastContent = '';
 		totalLines = 1;
@@ -95,6 +103,7 @@ $effect(() => {
 		appState.cursorLineActive = false;
 		if (previewEl) previewEl.scrollTop = 0;
 		render();
+		watchFile(path).catch(() => {});
 	}
 });
 
@@ -109,9 +118,26 @@ onMount(() => {
 	if (appState.openFilePath) {
 		currentPath = appState.openFilePath;
 		render();
+		watchFile(appState.openFilePath).catch(() => {});
 	}
-	pollInterval = setInterval(checkForChanges, 500);
-	return () => clearInterval(pollInterval);
+
+	let unlisten: (() => void) | null = null;
+	listen<string>('file-changed', (event) => {
+		if (event.payload !== appState.openFilePath) return;
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			debounceTimer = null;
+			checkForChanges();
+		}, 100);
+	}).then((fn) => {
+		unlisten = fn;
+	});
+
+	return () => {
+		if (currentPath) unwatchFile(currentPath).catch(() => {});
+		if (unlisten) unlisten();
+		if (debounceTimer) clearTimeout(debounceTimer);
+	};
 });
 
 $effect(() => {

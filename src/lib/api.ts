@@ -183,3 +183,12 @@ export function generateNoteTitle(
 ): Promise<string> {
 	return invoke('generate_note_title', { systemPath, path });
 }
+
+// File watching
+export function watchFile(path: string): Promise<void> {
+	return invoke('watch_file', { path });
+}
+
+export function unwatchFile(path: string): Promise<void> {
+	return invoke('unwatch_file', { path });
+}

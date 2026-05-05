@@ -3,13 +3,7 @@ import { Channel } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { Terminal } from '@xterm/xterm';
 import { onMount } from 'svelte';
-import {
-	ptyClose,
-	ptyCreate,
-	ptyCursorLine,
-	ptyResize,
-	ptyWrite,
-} from '$lib/api';
+import { ptyClose, ptyCreate, ptyResize, ptyWrite } from '$lib/api';
 import { appState } from '$lib/store.svelte';
 
 interface Props {
@@ -28,7 +22,6 @@ let cleanupFns: Array<() => void> = [];
 let resizeTimers: ReturnType<typeof setTimeout>[] = [];
 let lastW = 0;
 let lastH = 0;
-let cursorPoll: ReturnType<typeof setInterval> | null = null;
 
 export function blur() {
 	terminal?.blur();
@@ -171,23 +164,20 @@ onMount(() => {
 		// Catch any late layout settling
 		scheduleResizes();
 
-		// Poll nvim cursor line for preview scroll sync
-		cursorPoll = setInterval(async () => {
-			try {
-				const line = await ptyCursorLine(id);
-				if (line !== appState.cursorLine) {
-					appState.cursorLine = line;
-					appState.cursorLineActive = true;
-				}
-			} catch {
-				// PTY may not be ready yet
+		// Listen for cursor-moved events from the file watcher
+		const cursorEventName = `cursor-moved:${safeEventId}`;
+		const cursorUnlisten = await listen<number>(cursorEventName, (event) => {
+			const line = event.payload;
+			if (line !== appState.cursorLine) {
+				appState.cursorLine = line;
+				appState.cursorLineActive = true;
 			}
-		}, 150);
+		});
+		cleanupFns.push(() => cursorUnlisten());
 	})();
 
 	return () => {
 		clearTimers();
-		if (cursorPoll) clearInterval(cursorPoll);
 		for (const fn of cleanupFns) {
 			fn();
 		}

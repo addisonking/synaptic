@@ -1,10 +1,11 @@
+use notify::{Event, RecursiveMode, Watcher};
 use portable_pty::{CommandBuilder, NativePtySystem, PtyPair, PtySize, PtySystem};
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tauri::ipc::Channel;
 
@@ -26,6 +27,77 @@ fn get_pty_map() -> std::sync::MutexGuard<'static, Option<HashMap<String, PtySes
         *map = Some(HashMap::new());
     }
     map
+}
+
+static CURSOR_WATCHERS: Mutex<Option<HashMap<String, notify::RecommendedWatcher>>> =
+    Mutex::new(None);
+
+fn get_cursor_watchers(
+) -> std::sync::MutexGuard<'static, Option<HashMap<String, notify::RecommendedWatcher>>> {
+    let mut map = CURSOR_WATCHERS.lock().unwrap();
+    if map.is_none() {
+        *map = Some(HashMap::new());
+    }
+    map
+}
+
+fn safe_event_name(raw: &str) -> String {
+    raw.chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '/' || c == ':' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+fn start_cursor_watcher(
+    app: AppHandle,
+    id: String,
+    cursor_path: PathBuf,
+) -> Result<(), String> {
+    let mut map = get_cursor_watchers();
+    let map = map.as_mut().unwrap();
+
+    map.remove(&id);
+
+    let event_name = safe_event_name(&format!("cursor-moved:{}", id));
+    let app_emit = app.clone();
+    let path = cursor_path.clone();
+    let id_for_map = id.clone();
+
+    let mut watcher = notify::recommended_watcher(
+        move |res: Result<Event, notify::Error>| {
+            if let Ok(event) = res {
+                if matches!(
+                    event.kind,
+                    notify::EventKind::Create(_) | notify::EventKind::Modify(_)
+                ) {
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        let line = content.trim().parse::<u32>().unwrap_or(1).max(1);
+                        let _ = app_emit.emit(&event_name, line);
+                    }
+                }
+            }
+        },
+    )
+    .map_err(|e| e.to_string())?;
+
+    watcher
+        .watch(Path::new(&cursor_path), RecursiveMode::NonRecursive)
+        .map_err(|e| e.to_string())?;
+
+    map.insert(id_for_map, watcher);
+    Ok(())
+}
+
+fn stop_cursor_watcher(id: &str) {
+    let mut map = get_cursor_watchers();
+    if let Some(map) = map.as_mut() {
+        map.remove(id);
+    }
 }
 
 fn resolve_nvim() -> String {
@@ -156,6 +228,8 @@ pub fn pty_create(
 
     let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
 
+    let _ = start_cursor_watcher(app.clone(), id.clone(), cursor_path.clone());
+
     let session = PtySession {
         pair: Arc::new(Mutex::new(pair)),
         child: Arc::new(Mutex::new(child)),
@@ -227,6 +301,7 @@ pub fn pty_cursor_line(id: String) -> Result<u32, String> {
 
 #[tauri::command]
 pub fn pty_close(id: String) -> Result<(), String> {
+    stop_cursor_watcher(&id);
     let mut map = get_pty_map();
     if let Some(session) = map.as_mut().unwrap().remove(&id) {
         let _ = std::fs::remove_file(&session.cursor_path);

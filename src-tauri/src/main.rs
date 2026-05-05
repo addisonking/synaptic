@@ -14,10 +14,12 @@ mod indexer;
 mod settings;
 mod pty;
 mod semantic;
+mod watcher;
 
 use indexer::{build_index, get_backlinks, get_graph, get_tags};
 use settings::{get_settings, set_settings, Settings};
 use pty::{pty_create, pty_write, pty_resize, pty_close, pty_cursor_line};
+use watcher::{watch_file, unwatch_file};
 
 fn scratch_dir(vault_path: &str) -> PathBuf {
     Path::new(vault_path).join("scratch")
@@ -788,6 +790,8 @@ fn main() {
             pty_resize,
             pty_cursor_line,
             pty_close,
+            watch_file,
+            unwatch_file,
             check_dependencies_cmd,
         ])
         .run(tauri::generate_context!())
