@@ -128,6 +128,10 @@ function isTagEdge(e: SimEdge) {
 	return e.source.startsWith('#') || e.target.startsWith('#');
 }
 
+function isHierarchyEdge(e: SimEdge) {
+	return e.source.startsWith('#') && e.target.startsWith('#');
+}
+
 // Continuous simulation with cooling
 function tick() {
 	if (alpha < 0.001) return;
@@ -250,13 +254,14 @@ function draw() {
 		ctx.lineTo(b.x, b.y);
 
 		if (tagEdge) {
-			ctx.setLineDash([3, 4]);
+			const hierarchy = isHierarchyEdge(e);
+			ctx.setLineDash(hierarchy ? [] : [3, 4]);
 			if (isNeighborEdge || isSelectedEdge) {
-				ctx.strokeStyle = '#2a6060';
-				ctx.lineWidth = 1;
+				ctx.strokeStyle = hierarchy ? '#1e5050' : '#2a6060';
+				ctx.lineWidth = hierarchy ? 0.8 : 1;
 			} else {
-				ctx.strokeStyle = '#182828';
-				ctx.lineWidth = 0.8;
+				ctx.strokeStyle = hierarchy ? '#142020' : '#182828';
+				ctx.lineWidth = hierarchy ? 0.6 : 0.8;
 			}
 		} else {
 			ctx.setLineDash([]);

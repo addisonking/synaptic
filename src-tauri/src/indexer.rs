@@ -279,19 +279,35 @@ pub fn get_graph(system_path: &str) -> Result<GraphData, std::io::Error> {
         }
     }).collect();
 
-    // Tag nodes and edges
-    for (tag, note_names) in &index.tag_notes {
-        let tag_id = format!("#{}", tag);
-        let note_count = note_names.iter().filter(|n| note_ids.contains(*n)).count();
-        if note_count == 0 {
-            continue;
+    // Expand leaf tags to include all ancestor paths (e.g. "cs/principles" → also "cs")
+    let mut all_tag_names: HashSet<String> = index.tag_notes.keys().cloned().collect();
+    let leaf_tags: Vec<String> = all_tag_names.iter().cloned().collect();
+    for tag in &leaf_tags {
+        let parts: Vec<&str> = tag.split('/').collect();
+        for i in 1..parts.len() {
+            all_tag_names.insert(parts[..i].join("/"));
         }
+    }
+
+    // Tag nodes — link_count is total notes reachable (direct + all subtags)
+    for tag in &all_tag_names {
+        let tag_id = format!("#{}", tag);
+        let prefix = format!("{}/", tag);
+        let note_count: usize = index.tag_notes.iter()
+            .filter(|(t, _)| *t == tag || t.starts_with(&prefix))
+            .map(|(_, names)| names.iter().filter(|n| note_ids.contains(*n)).count())
+            .sum();
         nodes.push(GraphNode {
-            id: tag_id.clone(),
+            id: tag_id,
             path: String::new(),
             link_count: note_count,
             kind: "tag".to_string(),
         });
+    }
+
+    // Note → direct tag edges (dashed in renderer)
+    for (tag, note_names) in &index.tag_notes {
+        let tag_id = format!("#{}", tag);
         for note_name in note_names {
             if note_ids.contains(note_name) {
                 edges.push(GraphEdge {
@@ -299,6 +315,16 @@ pub fn get_graph(system_path: &str) -> Result<GraphData, std::io::Error> {
                     target: tag_id.clone(),
                 });
             }
+        }
+    }
+
+    // Tag hierarchy edges: subtag → parent (solid in renderer)
+    for tag in &all_tag_names {
+        if let Some(slash_pos) = tag.rfind('/') {
+            edges.push(GraphEdge {
+                source: format!("#{}", tag),
+                target: format!("#{}", &tag[..slash_pos]),
+            });
         }
     }
 
