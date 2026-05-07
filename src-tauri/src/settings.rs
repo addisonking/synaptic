@@ -13,6 +13,14 @@ pub struct Settings {
     pub ollama_model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub generation_model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub github_sync_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub github_repo_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub github_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub github_branch: Option<String>,
 }
 
 impl Default for Settings {
@@ -22,6 +30,10 @@ impl Default for Settings {
             ollama_url: Some("http://localhost:11434".to_string()),
             ollama_model: Some("nomic-embed-text".to_string()),
             generation_model: Some("gemma4:26b".to_string()),
+            github_sync_enabled: Some(false),
+            github_repo_url: None,
+            github_token: None,
+            github_branch: Some("main".to_string()),
         }
     }
 }

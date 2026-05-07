@@ -4,11 +4,14 @@ import type {
 	BacklinkInfo,
 	DependencyStatus,
 	FileNode,
+	GitCheckResult,
 	GraphData,
 	OllamaHealth,
+	RepoValidationResult,
 	ScratchEntry,
 	SearchResult,
 	SemanticResult,
+	SyncState,
 	SystemInfo,
 	TagEntry,
 } from './types';
@@ -191,4 +194,24 @@ export function watchFile(path: string): Promise<void> {
 
 export function unwatchFile(path: string): Promise<void> {
 	return invoke('unwatch_file', { path });
+}
+
+// Sync
+export function checkGitInstalled(): Promise<GitCheckResult> {
+	return invoke('check_git_installed_cmd');
+}
+
+export function validateGitHubToken(
+	token: string,
+	repoUrl: string,
+): Promise<RepoValidationResult> {
+	return invoke('validate_github_token_cmd', { token, repoUrl });
+}
+
+export function getSyncState(): Promise<SyncState> {
+	return invoke('get_sync_state_cmd');
+}
+
+export function syncNow(systemPath: string): Promise<void> {
+	return invoke('sync_now_cmd', { systemPath });
 }

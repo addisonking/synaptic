@@ -1,6 +1,7 @@
+import { listen } from '@tauri-apps/api/event';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
-import { fileTree } from './api';
-import type { FileNode, SearchResult, SystemInfo } from './types';
+import { fileTree, getSyncState } from './api';
+import type { FileNode, SearchResult, SyncState, SystemInfo } from './types';
 
 // Global application state using Svelte 5 runes
 export const appState = $state({
@@ -25,6 +26,11 @@ export const appState = $state({
 	sidebarVisible: true,
 	cursorLine: 1,
 	cursorLineActive: false,
+	syncStatus: {
+		syncing: false,
+		last_error: null,
+		last_sync: null,
+	} as SyncState,
 });
 
 export function setSystem(system: SystemInfo | null) {
@@ -106,4 +112,18 @@ export function loadZoom() {
 			.setZoom(appState.zoom / 100)
 			.catch(() => {});
 	}
+}
+
+export async function initSyncListener() {
+	// Load initial state
+	try {
+		appState.syncStatus = await getSyncState();
+	} catch {
+		// ignore
+	}
+
+	// Listen for backend sync-status events
+	listen<SyncState>('sync-status', (event) => {
+		appState.syncStatus = event.payload;
+	}).catch(() => {});
 }

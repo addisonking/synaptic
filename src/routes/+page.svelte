@@ -28,6 +28,7 @@ import {
 	appState,
 	goBack,
 	goForward,
+	initSyncListener,
 	loadZoom,
 	openFile,
 	refreshFileTree,
@@ -99,6 +100,7 @@ $effect(() => {
 
 onMount(() => {
 	loadZoom();
+	initSyncListener();
 	checkDependencies()
 		.then((status) => {
 			depsStatus = status;

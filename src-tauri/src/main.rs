@@ -15,11 +15,13 @@ mod settings;
 mod pty;
 mod semantic;
 mod watcher;
+mod sync;
 
 use indexer::{build_index, get_backlinks, get_graph, get_tags};
 use settings::{get_settings, set_settings, Settings};
 use pty::{pty_create, pty_write, pty_resize, pty_close, pty_cursor_line};
 use watcher::{watch_file, unwatch_file};
+use sync::{check_git_installed, get_sync_state, sync_now, validate_repo_access, start_background_sync};
 
 fn scratch_dir(vault_path: &str) -> PathBuf {
     Path::new(vault_path).join("scratch")
@@ -172,6 +174,11 @@ fn system_open(app: AppHandle, path: String) -> Result<SystemInfo, String> {
             }
         }
     });
+
+    // Start background GitHub sync if enabled
+    let path_clone = path.clone();
+    let app_clone = app.clone();
+    start_background_sync(path_clone, app_clone);
 
     Ok(info)
 }
@@ -750,6 +757,40 @@ async fn check_dependencies_cmd(app: AppHandle) -> Result<DependencyStatus, Stri
     })
 }
 
+// ─── Sync Commands ───────────────────────────────────────────────────────────
+
+#[tauri::command]
+fn check_git_installed_cmd() -> sync::GitCheckResult {
+    sync::GitCheckResult {
+        installed: check_git_installed(),
+    }
+}
+
+#[tauri::command]
+async fn validate_github_token_cmd(token: String, repo_url: String) -> Result<sync::RepoValidationResult, String> {
+    match validate_repo_access(&token, &repo_url).await {
+        Ok(()) => Ok(sync::RepoValidationResult {
+            valid: true,
+            message: "Token is valid and has access to the repository".to_string(),
+        }),
+        Err(e) => Ok(sync::RepoValidationResult {
+            valid: false,
+            message: e,
+        }),
+    }
+}
+
+#[tauri::command]
+fn get_sync_state_cmd() -> sync::SyncState {
+    get_sync_state()
+}
+
+#[tauri::command]
+async fn sync_now_cmd(system_path: String, app: AppHandle) -> Result<(), String> {
+    let settings = get_settings(&app).map_err(|e| e.to_string())?;
+    sync_now(&system_path, &settings, &app).await
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 fn main() {
@@ -793,6 +834,10 @@ fn main() {
             watch_file,
             unwatch_file,
             check_dependencies_cmd,
+            check_git_installed_cmd,
+            validate_github_token_cmd,
+            get_sync_state_cmd,
+            sync_now_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

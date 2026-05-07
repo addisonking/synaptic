@@ -65,6 +65,25 @@ export interface AppSettings {
 	ollama_url?: string;
 	ollama_model?: string;
 	generation_model?: string;
+	github_sync_enabled?: boolean;
+	github_repo_url?: string;
+	github_token?: string;
+	github_branch?: string;
+}
+
+export interface SyncState {
+	syncing: boolean;
+	last_error: string | null;
+	last_sync: number | null;
+}
+
+export interface GitCheckResult {
+	installed: boolean;
+}
+
+export interface RepoValidationResult {
+	valid: boolean;
+	message: string;
 }
 
 export interface OllamaHealth {
