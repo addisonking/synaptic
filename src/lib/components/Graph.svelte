@@ -58,6 +58,7 @@ let panStartX = 0,
 	panStartY = 0;
 let hoveredNode: SimNode | null = null;
 let alpha = 0.2; // simulation heat — start low for gentle entry
+let minLinks = $state(0);
 
 const currentName = $derived(
 	appState.openFilePath?.split('/').pop()?.replace(/\.md$/, '') ?? '',
@@ -132,38 +133,44 @@ function isHierarchyEdge(e: SimEdge) {
 	return e.source.startsWith('#') && e.target.startsWith('#');
 }
 
+function isNodeVisible(n: SimNode): boolean {
+	if (n.kind === 'tag' && !showTags) return false;
+	if (!showOrphans && !connectedIds.has(n.id) && n.kind !== 'tag') return false;
+	if (n.id === currentName || n === selectedNode) return true;
+	if (minLinks > 0 && n.link_count < minLinks && n.kind !== 'tag') return false;
+	return true;
+}
+
 // Continuous simulation with cooling
 function tick() {
 	if (alpha < 0.001) return;
 	alpha *= 0.992;
 
-	const REPEL = 600;
-	const LINK_DIST = 140;
-	const ATTRACT = 0.04;
-	const CENTER_PULL = 0.003;
-	const DAMP = 0.82;
+	const n = nodes.length;
+	const REPEL = Math.min(500 + n * 6, 3200);
+	const LINK_DIST = Math.min(40 + n * 0.4, 150);
+	const ATTRACT = 0.07;
+	const CENTER_PULL = 0.001;
+	const DAMP = 0.85;
 	const cx = canvas ? canvas.width / 2 : 0;
 	const cy = canvas ? canvas.height / 2 : 0;
 
-	// Repulsion
+	// Repulsion — no distance cutoff so far-apart clusters repel each other (like d3 manyBody)
 	for (let i = 0; i < nodes.length; i++) {
 		for (let j = i + 1; j < nodes.length; j++) {
 			const a = nodes[i],
 				b = nodes[j];
 			const dx = b.x - a.x;
 			const dy = b.y - a.y;
-			const dist2 = Math.max(dx * dx + dy * dy, 400); // clamp to prevent infinity forces
+			const dist2 = Math.max(dx * dx + dy * dy, 400);
 			const dist = Math.sqrt(dist2);
-			const minDist = a.r + b.r + 20;
-			if (dist < minDist * 4) {
-				const force = (REPEL / dist2) * alpha;
-				const nx = dx / dist,
-					ny = dy / dist;
-				a.vx -= nx * force;
-				a.vy -= ny * force;
-				b.vx += nx * force;
-				b.vy += ny * force;
-			}
+			const force = (REPEL / dist2) * alpha;
+			const nx = dx / dist,
+				ny = dy / dist;
+			a.vx -= nx * force;
+			a.vy -= ny * force;
+			b.vx += nx * force;
+			b.vy += ny * force;
 		}
 	}
 
@@ -238,6 +245,7 @@ function draw() {
 		const a = e.a,
 			b = e.b;
 		if (!a || !b) continue;
+		if (!isNodeVisible(a) || !isNodeVisible(b)) continue;
 		const tagEdge = isTagEdge(e);
 		if (tagEdge && !showTags) continue;
 
@@ -290,9 +298,8 @@ function draw() {
 
 	// Nodes
 	for (const n of nodes) {
+		if (!isNodeVisible(n)) continue;
 		const isTag = n.kind === 'tag';
-		if (isTag && !showTags) continue;
-		if (!showOrphans && !connectedIds.has(n.id) && !isTag) continue;
 
 		const isCurrent = n.id === currentName;
 		const isHovered = n === hoveredNode;
@@ -360,14 +367,13 @@ function draw() {
 		}
 	}
 
-	// Labels
-	const showAllLabels = scale > 0.8;
+	// Labels — progressive disclosure based on zoom + node degree
+	const labelMinLinks =
+		scale >= 1.3 ? 0 : scale >= 0.8 ? 2 : scale >= 0.5 ? 5 : 10;
 	ctx.textBaseline = 'middle';
 
 	for (const n of nodes) {
-		const isTag = n.kind === 'tag';
-		if (isTag && !showTags) continue;
-		if (!showOrphans && !connectedIds.has(n.id) && !isTag) continue;
+		if (!isNodeVisible(n)) continue;
 
 		const isCurrent = n.id === currentName;
 		const isHovered = n === hoveredNode;
@@ -381,7 +387,7 @@ function draw() {
 			isNeighbor ||
 			isSelected ||
 			isSelectedNeighbor ||
-			showAllLabels;
+			n.link_count >= labelMinLinks;
 		if (!shouldShow) continue;
 
 		const dimmed =
@@ -391,7 +397,7 @@ function draw() {
 		const fontSize = Math.max(9, 11 / scale);
 		ctx.font = `${isCurrent || isSelected ? 600 : 400} ${fontSize}px "Geist Mono", monospace`;
 
-		if (isTag) {
+		if (n.kind === 'tag') {
 			if (dimmed) ctx.fillStyle = '#1a3030';
 			else if (isSelected || isHovered) ctx.fillStyle = '#3a9a9a';
 			else if (isNeighbor || isSelectedNeighbor) ctx.fillStyle = '#2a6060';
@@ -442,8 +448,7 @@ function hitTest(clientX: number, clientY: number): SimNode | null {
 	const { x, y } = toWorld(clientX, clientY);
 	for (let i = nodes.length - 1; i >= 0; i--) {
 		const n = nodes[i];
-		if (n.kind === 'tag' && !showTags) continue;
-		if (!showOrphans && !connectedIds.has(n.id) && n.kind !== 'tag') continue;
+		if (!isNodeVisible(n)) continue;
 		const r = n.r / scale + 4 / scale;
 		if ((n.x - x) ** 2 + (n.y - y) ** 2 <= r * r) return n;
 	}
@@ -497,17 +502,23 @@ function onMouseMove(e: MouseEvent) {
 async function onMouseUp(_e: MouseEvent) {
 	const elapsed = Date.now() - mouseDownTime;
 	if (clickNode && elapsed < 300) {
-		if (clickNode.path) {
-			const content = await fileRead(clickNode.path);
-			openFile(clickNode.path, content);
-			onClose();
-		} else if (appState.system && clickNode.kind !== 'tag') {
-			// Ghost node — create the note
-			const newPath = `${appState.system.path}/notes/${clickNode.id}.md`;
-			await fileCreate(newPath);
-			const content = await fileRead(newPath);
-			openFile(newPath, content);
-			onClose();
+		if (clickNode === selectedNode) {
+			// Second click on already-selected node: open it
+			if (clickNode.path) {
+				const content = await fileRead(clickNode.path);
+				openFile(clickNode.path, content);
+				onClose();
+			} else if (appState.system && clickNode.kind !== 'tag') {
+				const newPath = `${appState.system.path}/notes/${clickNode.id}.md`;
+				await fileCreate(newPath);
+				const content = await fileRead(newPath);
+				openFile(newPath, content);
+				onClose();
+			}
+		} else {
+			// First click: select and center
+			centerOnNode(clickNode);
+			ensureLoop();
 		}
 	}
 	dragging = null;
@@ -603,6 +614,11 @@ function clearSearch() {
 	ensureLoop();
 }
 
+function cycleMinLinks() {
+	minLinks = minLinks >= 3 ? 0 : minLinks + 1;
+	ensureLoop();
+}
+
 function resize() {
 	if (!canvas) return;
 	canvas.width = canvas.offsetWidth;
@@ -660,6 +676,13 @@ function onKeydown(e: KeyboardEvent) {
         title="Toggle tag nodes"
       >tags</button>
 
+      <button
+        class="tag-toggle"
+        class:active={minLinks > 0}
+        onclick={cycleMinLinks}
+        title="Minimum connections filter"
+      >{minLinks === 0 ? 'all' : `≥${minLinks}`}</button>
+
       <div class="graph-search-wrap">
         <div class="graph-search">
           <Search size={12} />
@@ -690,7 +713,7 @@ function onKeydown(e: KeyboardEvent) {
       onmouseup={onMouseUp}
       onwheel={onWheel}
     ></canvas>
-		<div class="graph-hint">scroll to zoom · drag to pan · click node to open · click ghost to create · / to search</div>
+		<div class="graph-hint">scroll to zoom · drag to pan · click to select · click again to open · / to search</div>
   </div>
 </div>
 
