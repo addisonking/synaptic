@@ -385,6 +385,7 @@ const tabItems = [
     padding: 20px;
     flex: 1;
     overflow-y: auto;
+    max-height: calc(100vh - 180px);
   }
   .field {
     margin-bottom: 20px;

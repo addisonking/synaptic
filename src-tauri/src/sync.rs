@@ -125,11 +125,21 @@ pub async fn validate_repo_access(token: &str, repo_url: &str) -> Result<(), Str
 }
 
 fn run_git(vault_path: &str, args: &[&str]) -> Result<std::process::Output, String> {
+	eprintln!("[sync] git {} in {}", args.join(" "), vault_path);
 	let output = Command::new("git")
 		.args(args)
 		.current_dir(vault_path)
 		.output()
 		.map_err(|e| format!("Failed to run git: {}", e))?;
+
+	let stdout = String::from_utf8_lossy(&output.stdout);
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	if !stdout.is_empty() {
+		eprintln!("[sync] git stdout: {}", stdout.trim());
+	}
+	if !stderr.is_empty() {
+		eprintln!("[sync] git stderr: {}", stderr.trim());
+	}
 	Ok(output)
 }
 
@@ -170,10 +180,17 @@ pub fn ensure_repo_initialized(
 		}
 	}
 
-	// Try to create and checkout the branch (fails silently if already exists)
-	let _ = run_git_expect_success(vault_path, &["checkout", "-b", branch]);
+	// Create or reset-and-checkout the branch so we are always on the right one
+	let _ = run_git(vault_path, &["checkout", "-B", branch]);
 
 	Ok(())
+}
+
+fn is_nothing_to_commit(output: &std::process::Output) -> bool {
+	let stdout = String::from_utf8_lossy(&output.stdout);
+	let stderr = String::from_utf8_lossy(&output.stderr);
+	let text = format!("{} {}", stdout, stderr);
+	text.contains("nothing to commit") || text.contains("nothing added to commit") || text.contains("working tree clean")
 }
 
 pub async fn sync_now(vault_path: &str, settings: &Settings, app: &AppHandle) -> Result<(), String> {
@@ -201,15 +218,13 @@ pub async fn sync_now(vault_path: &str, settings: &Settings, app: &AppHandle) ->
 		// Stage all changes
 		run_git_expect_success(vault_path, &["add", "-A"])?;
 
-		// Commit (ignore "nothing to commit" error)
+		// Commit (ignore "nothing to commit" — git writes it to stdout with exit code 1)
 		let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
 		let commit_msg = format!("synaptic auto sync {}", timestamp);
 		let output = run_git(vault_path, &["commit", "-m", &commit_msg])?;
-		if !output.status.success() {
+		if !output.status.success() && !is_nothing_to_commit(&output) {
 			let stderr = String::from_utf8_lossy(&output.stderr);
-			if !stderr.contains("nothing to commit") && !stderr.contains("nothing added to commit") {
-				return Err(format!("git commit failed: {}", stderr));
-			}
+			return Err(format!("git commit failed: {}", stderr));
 		}
 
 		// Push force
