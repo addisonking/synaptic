@@ -636,6 +636,7 @@ async function openSelectedNode() {
 
 function onKeydown(e: KeyboardEvent) {
 	if (e.key === 'Escape') {
+		e.preventDefault();
 		if (document.activeElement === searchInputEl || selectedNode) {
 			clearSearch();
 			searchInputEl?.blur();

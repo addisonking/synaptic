@@ -226,6 +226,7 @@ onMount(() => {
 			appState.showGraph = false;
 			appState.showSettings = false;
 			if (hadDialog) {
+				e.preventDefault();
 				nvimTerminalRef?.focus();
 			}
 			return;

@@ -141,6 +141,7 @@ async function handleSelect(file?: { name: string; path: string }) {
 
 function handleKeydown(e: KeyboardEvent) {
 	if (e.key === 'Escape') {
+		e.preventDefault();
 		open = false;
 	}
 }

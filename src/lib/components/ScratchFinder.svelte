@@ -55,6 +55,7 @@ async function handleSelect(file?: ScratchEntry) {
 
 function handleKeydown(e: KeyboardEvent) {
 	if (e.key === 'Escape') {
+		e.preventDefault();
 		open = false;
 	}
 }
