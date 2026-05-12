@@ -191,8 +191,16 @@ export function generateNote(
 	name: string,
 	tags: string[],
 	vaultPath: string,
+	instructions: string,
+	onChunk: Channel<string>,
 ): Promise<string> {
-	return invoke('generate_note', { name, tags, vaultPath });
+	return invoke('generate_note', {
+		name,
+		tags,
+		vaultPath,
+		instructions,
+		onChunk,
+	});
 }
 
 // File watching

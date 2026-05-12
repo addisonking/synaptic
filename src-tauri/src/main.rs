@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 // use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use tauri::{ipc::Channel, AppHandle, Manager};
 use uuid::Uuid;
 use chrono::Utc;
 use walkdir::WalkDir;
@@ -667,6 +667,8 @@ async fn generate_note(
     name: String,
     tags: Vec<String>,
     vault_path: String,
+    instructions: Option<String>,
+    on_chunk: Channel<String>,
     app: AppHandle,
 ) -> Result<String, String> {
     let query = format!("{} {}", name, tags.join(" "));
@@ -712,13 +714,18 @@ async fn generate_note(
 
     let tags_csv = tags.join(", ");
 
+    let instructions_block = instructions
+        .as_ref()
+        .filter(|s| !s.is_empty())
+        .map(|s| format!("User instructions: {}\n\n", s))
+        .unwrap_or_default();
+
     let prompt = format!(
         r#"You are a knowledge-base assistant. Generate a well-structured Markdown note.
 
 Note title: {name}
 Tags: {tags_csv}
-
-{context_block}Available notes in this vault (use these exact names for [[backlinks]]):
+{instructions_block}{context_block}Available notes in this vault (use these exact names for [[backlinks]]):
 {note_list}
 Instructions:
 - Write a concise, informative note body (200–300 words).
@@ -746,13 +753,14 @@ Instructions:
         stream: bool,
     }
     #[derive(Deserialize)]
-    struct GenerateRes {
+    struct StreamChunk {
         response: String,
+        done: bool,
     }
 
     let client = semantic::http_client();
-    let req = GenerateReq { model: &model, prompt: &prompt, stream: false };
-    let res = client
+    let req = GenerateReq { model: &model, prompt: &prompt, stream: true };
+    let mut res = client
         .post(format!("{}/api/generate", url.trim_end_matches('/')))
         .json(&req)
         .send()
@@ -771,10 +779,38 @@ Instructions:
         return Err(format!("Ollama returned HTTP {}: {}", status, body_text));
     }
 
-    let body: GenerateRes = res
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse Ollama response: {}", e))?;
+    let mut buf = String::new();
+    let mut accumulated = String::new();
+    let mut finished = false;
+
+    while !finished {
+        match res.chunk().await {
+            Ok(Some(chunk)) => {
+                let text = std::str::from_utf8(&chunk)
+                    .map_err(|e| format!("Invalid UTF-8 in stream: {}", e))?;
+                buf.push_str(text);
+                while let Some(pos) = buf.find('\n') {
+                    let line = buf[..pos].trim().to_string();
+                    buf = buf[pos + 1..].to_string();
+                    if line.is_empty() {
+                        continue;
+                    }
+                    if let Ok(obj) = serde_json::from_str::<StreamChunk>(&line) {
+                        if obj.done {
+                            finished = true;
+                            break;
+                        }
+                        accumulated.push_str(&obj.response);
+                        if on_chunk.send(obj.response).is_err() {
+                            return Err("Generation cancelled".to_string());
+                        }
+                    }
+                }
+            }
+            Ok(None) => break,
+            Err(e) => return Err(format!("Stream error: {}", e)),
+        }
+    }
 
     let tags_yaml = if tags.is_empty() {
         "[]".to_string()
@@ -789,7 +825,7 @@ Instructions:
         "---\ntags: {}\n---\n\n# {}\n\n{}",
         tags_yaml,
         name,
-        body.response.trim()
+        accumulated.trim()
     );
 
     let notes_dir = Path::new(&vault_path).join("notes");
