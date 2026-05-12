@@ -726,6 +726,7 @@ Instructions:
 - Use ## subheadings to organize content where appropriate.
 - Use [[Note Name]] syntax to link genuinely related notes from the list above. Do not invent note names not in the list.
 - Do not include a YAML frontmatter block.
+- Do not include a top-level # heading — the title is added automatically.
 - Do not wrap output in a code fence.
 - Respond with only the note body Markdown, nothing else."#
     );
