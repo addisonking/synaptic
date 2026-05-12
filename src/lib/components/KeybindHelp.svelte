@@ -14,23 +14,43 @@ $effect(() => {
 	}
 });
 
-const shortcuts = [
-	{ key: '⌘P', action: 'Find or create note' },
-	{ key: '⌘⇧P', action: 'Semantic search' },
-	{ key: '⌘N', action: 'New note' },
-	{ key: '⌘⇧G', action: 'Generate note with AI' },
-	{ key: '⌘R', action: 'Rename current note' },
-	{ key: '⌘⇧N', action: 'New scratch note' },
-	{ key: '⌘⇧S', action: 'Search scratch notes' },
-	{ key: '⌘G', action: 'Toggle graph view' },
-	{ key: '⌘[', action: 'Go back in history' },
-	{ key: '⌘]', action: 'Go forward in history' },
-	{ key: '⌘= / ⌘-', action: 'Zoom in / out' },
-	{ key: '⌘0', action: 'Reset zoom' },
-	{ key: '⌘,', action: 'Open settings' },
-	{ key: '?', action: 'Show this help' },
-	{ key: 'Esc', action: 'Close any overlay' },
-	{ key: 'Delete (x2)', action: 'Trash current note' },
+const groups = [
+	{
+		section: 'Navigation',
+		items: [
+			{ key: '⌘P', action: 'Find or create note' },
+			{ key: '⌘⇧P', action: 'Semantic search' },
+			{ key: '⌘[', action: 'Go back' },
+			{ key: '⌘]', action: 'Go forward' },
+		],
+	},
+	{
+		section: 'Notes',
+		items: [
+			{ key: '⌘N', action: 'New note' },
+			{ key: '⌘⇧N', action: 'New scratch note' },
+			{ key: '⌘K', action: 'Generate note with AI' },
+			{ key: '⌘R', action: 'Rename current note' },
+			{ key: '⌘⇧S', action: 'Search scratch notes' },
+			{ key: 'Del ×2', action: 'Trash current note' },
+		],
+	},
+	{
+		section: 'Views',
+		items: [
+			{ key: '⌘G', action: 'Toggle graph view' },
+			{ key: '⌘,', action: 'Settings' },
+			{ key: '?', action: 'Keyboard shortcuts' },
+			{ key: 'Esc', action: 'Close overlay' },
+		],
+	},
+	{
+		section: 'Zoom',
+		items: [
+			{ key: '⌘= / ⌘-', action: 'Zoom in / out' },
+			{ key: '⌘0', action: 'Reset zoom' },
+		],
+	},
 ];
 </script>
 
@@ -38,11 +58,16 @@ const shortcuts = [
   <div class="content">
     <table>
       <tbody>
-        {#each shortcuts as shortcut}
-          <tr>
-            <td class="key"><kbd>{shortcut.key}</kbd></td>
-            <td class="action">{shortcut.action}</td>
+        {#each groups as group}
+          <tr class="section-header">
+            <td colspan="2">{group.section}</td>
           </tr>
+          {#each group.items as shortcut}
+            <tr>
+              <td class="key"><kbd>{shortcut.key}</kbd></td>
+              <td class="action">{shortcut.action}</td>
+            </tr>
+          {/each}
         {/each}
       </tbody>
     </table>
@@ -66,8 +91,19 @@ const shortcuts = [
   tr:last-child {
     border-bottom: none;
   }
+  tr.section-header td {
+    padding: 14px 0 4px;
+    font-size: 10px;
+    font-variant: small-caps;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    border-bottom: none;
+  }
+  tr.section-header:first-child td {
+    padding-top: 4px;
+  }
   td {
-    padding: 8px 0;
+    padding: 7px 0;
     font-size: 13px;
   }
   .key {

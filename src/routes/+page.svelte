@@ -160,13 +160,13 @@ onMount(() => {
 				showScratchFinder = true;
 				return;
 			}
-			if (e.key === 'G' || (e.key === 'g' && e.shiftKey)) {
+			if (e.key === 'k') {
 				e.preventDefault();
 				blurTerminal();
 				showGenerateNote = true;
 				return;
 			}
-			if (e.key === 'g' && !e.shiftKey) {
+			if (e.key === 'g') {
 				e.preventDefault();
 				blurTerminal();
 				appState.showGraph = !appState.showGraph;
