@@ -120,7 +120,8 @@ function handleOpenChange(newOpen: boolean) {
 
   :global(.dialog-body) {
     padding: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     flex: 1;
     min-height: 0;
   }
