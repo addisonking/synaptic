@@ -663,6 +663,145 @@ Note content:
 }
 
 #[tauri::command]
+async fn generate_note(
+    name: String,
+    tags: Vec<String>,
+    vault_path: String,
+    app: AppHandle,
+) -> Result<String, String> {
+    let query = format!("{} {}", name, tags.join(" "));
+
+    let semantic_results = semantic::semantic_search(&vault_path, &query, 6, &app)
+        .await
+        .unwrap_or_default();
+
+    let all_note_names: Vec<String> = WalkDir::new(&vault_path)
+        .into_iter()
+        .filter_entry(|e| {
+            let n = e.file_name().to_string_lossy();
+            !n.starts_with('.') && n != "scratch"
+        })
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let p = e.path();
+            p.is_file() && p.extension().and_then(|x| x.to_str()) == Some("md")
+        })
+        .filter_map(|e| {
+            e.path().file_stem().map(|s| s.to_string_lossy().to_string())
+        })
+        .take(150)
+        .collect();
+
+    let context_block = if semantic_results.is_empty() {
+        String::new()
+    } else {
+        let snippets: String = semantic_results
+            .iter()
+            .map(|r| {
+                let snippet: String = r.content.chars().take(400).collect();
+                format!("### {}\n{}\n\n", r.name, snippet)
+            })
+            .collect();
+        format!("Related context from existing notes:\n{}\n", snippets)
+    };
+
+    let note_list: String = all_note_names
+        .iter()
+        .map(|n| format!("- {}\n", n))
+        .collect();
+
+    let tags_csv = tags.join(", ");
+
+    let prompt = format!(
+        r#"You are a knowledge-base assistant. Generate a well-structured Markdown note.
+
+Note title: {name}
+Tags: {tags_csv}
+
+{context_block}Available notes in this vault (use these exact names for [[backlinks]]):
+{note_list}
+Instructions:
+- Write a concise, informative note body (200–300 words).
+- Begin with a brief overview paragraph.
+- Use ## subheadings to organize content where appropriate.
+- Use [[Note Name]] syntax to link genuinely related notes from the list above. Do not invent note names not in the list.
+- Do not include a YAML frontmatter block.
+- Do not wrap output in a code fence.
+- Respond with only the note body Markdown, nothing else."#
+    );
+
+    let settings = get_settings(&app).map_err(|e| e.to_string())?;
+    let url = settings
+        .ollama_url
+        .unwrap_or_else(|| "http://localhost:11434".to_string());
+    let model = settings
+        .generation_model
+        .unwrap_or_else(|| "gemma4:26b".to_string());
+
+    #[derive(Serialize)]
+    struct GenerateReq<'a> {
+        model: &'a str,
+        prompt: &'a str,
+        stream: bool,
+    }
+    #[derive(Deserialize)]
+    struct GenerateRes {
+        response: String,
+    }
+
+    let client = semantic::http_client();
+    let req = GenerateReq { model: &model, prompt: &prompt, stream: false };
+    let res = client
+        .post(format!("{}/api/generate", url.trim_end_matches('/')))
+        .json(&req)
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_connect() || e.is_request() {
+                format!("Cannot connect to Ollama at {}. Is it running?", url)
+            } else {
+                format!("Ollama request failed: {}", e)
+            }
+        })?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let body_text = res.text().await.unwrap_or_default();
+        return Err(format!("Ollama returned HTTP {}: {}", status, body_text));
+    }
+
+    let body: GenerateRes = res
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Ollama response: {}", e))?;
+
+    let tags_yaml = if tags.is_empty() {
+        "[]".to_string()
+    } else {
+        format!(
+            "[{}]",
+            tags.iter().map(|t| t.trim().to_string()).collect::<Vec<_>>().join(", ")
+        )
+    };
+
+    let file_content = format!(
+        "---\ntags: {}\n---\n\n# {}\n\n{}",
+        tags_yaml,
+        name,
+        body.response.trim()
+    );
+
+    let notes_dir = Path::new(&vault_path).join("notes");
+    fs::create_dir_all(&notes_dir).map_err(|e| e.to_string())?;
+    let file_path = notes_dir.join(format!("{}.md", name.trim()));
+    if file_path.exists() {
+        return Err(format!("A note named '{}' already exists.", name));
+    }
+    fs::write(&file_path, &file_content).map_err(|e| e.to_string())?;
+    Ok(file_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 fn find_note(system_path: String, name: String) -> Result<Option<String>, String> {
     let target_lower = name.to_lowercase();
     for entry in WalkDir::new(&system_path)
@@ -821,6 +960,7 @@ fn main() {
             scratch_create,
             scratch_list,
             generate_note_title,
+            generate_note,
             get_settings_cmd,
             set_settings_cmd,
             semantic_index_rebuild_cmd,

@@ -14,6 +14,7 @@ import {
 import DependencyCheck from '$lib/components/DependencyCheck.svelte';
 import Editor from '$lib/components/Editor.svelte';
 import FindOrCreate from '$lib/components/FindOrCreate.svelte';
+import GenerateNote from '$lib/components/GenerateNote.svelte';
 import Graph from '$lib/components/Graph.svelte';
 import KeybindHelp from '$lib/components/KeybindHelp.svelte';
 import Landing from '$lib/components/Landing.svelte';
@@ -38,6 +39,7 @@ import type { DependencyStatus } from '$lib/types';
 
 let showFindOrCreate = $state(false);
 let showNewNote = $state(false);
+let showGenerateNote = $state(false);
 let showRenameNote = $state(false);
 let showSemanticSearch = $state(false);
 let showScratchFinder = $state(false);
@@ -158,6 +160,12 @@ onMount(() => {
 				showScratchFinder = true;
 				return;
 			}
+			if (e.key === 'G' || (e.key === 'g' && e.shiftKey)) {
+				e.preventDefault();
+				blurTerminal();
+				showGenerateNote = true;
+				return;
+			}
 			if (e.key === 'g' && !e.shiftKey) {
 				e.preventDefault();
 				blurTerminal();
@@ -201,6 +209,7 @@ onMount(() => {
 			const hadDialog =
 				showFindOrCreate ||
 				showNewNote ||
+				showGenerateNote ||
 				showRenameNote ||
 				showSemanticSearch ||
 				showScratchFinder ||
@@ -209,6 +218,7 @@ onMount(() => {
 				appState.showSettings;
 			showFindOrCreate = false;
 			showNewNote = false;
+			showGenerateNote = false;
 			showRenameNote = false;
 			showSemanticSearch = false;
 			showScratchFinder = false;
@@ -225,6 +235,7 @@ onMount(() => {
 		if (
 			showFindOrCreate ||
 			showNewNote ||
+			showGenerateNote ||
 			showRenameNote ||
 			showSemanticSearch ||
 			showScratchFinder ||
@@ -351,6 +362,9 @@ async function handleCreateVault(parent: string, name: string) {
 {/if}
 {#if showNewNote}
   <NewNote onClose={() => showNewNote = false} initialName={newNoteName} />
+{/if}
+{#if showGenerateNote}
+  <GenerateNote onClose={() => showGenerateNote = false} />
 {/if}
 {#if showRenameNote}
   <RenameNote onClose={() => showRenameNote = false} />

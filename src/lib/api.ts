@@ -187,6 +187,14 @@ export function generateNoteTitle(
 	return invoke('generate_note_title', { systemPath, path });
 }
 
+export function generateNote(
+	name: string,
+	tags: string[],
+	vaultPath: string,
+): Promise<string> {
+	return invoke('generate_note', { name, tags, vaultPath });
+}
+
 // File watching
 export function watchFile(path: string): Promise<void> {
 	return invoke('watch_file', { path });
