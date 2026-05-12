@@ -8,9 +8,7 @@ APP_PATH="/Applications/$APP_NAME"
 BUILD_DIR="src-tauri/target/release/bundle/macos"
 
 echo "==> building synaptic locally..."
-if ! bun run tauri build; then
-	echo "warn: tauri build exited with errors, checking if .app was produced..."
-fi
+bun run tauri build --bundles app
 
 if [ ! -d "$BUILD_DIR/$APP_NAME" ]; then
 	echo "error: $APP_NAME not found after build."
