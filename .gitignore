@@ -29,6 +29,9 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Keys
+*.key
+
 
 
 
