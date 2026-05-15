@@ -45,13 +45,15 @@ fn settings_path(app: &AppHandle) -> PathBuf {
         .join("settings.json")
 }
 
-pub fn get_settings(app: &AppHandle) -> Result<Settings, std::io::Error> {
-    let path = settings_path(app);
-    if !path.exists() {
-        return Ok(Settings::default());
-    }
-    let content = fs::read_to_string(&path)?;
-    let mut settings: Settings = serde_json::from_str(&content).unwrap_or_default();
+pub fn config_dir() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    PathBuf::from(home)
+        .join("Library")
+        .join("Application Support")
+        .join("com.synaptic.app")
+}
+
+fn merge_defaults(settings: &mut Settings) {
     if settings.ollama_url.is_none() {
         settings.ollama_url = Settings::default().ollama_url;
     }
@@ -61,7 +63,30 @@ pub fn get_settings(app: &AppHandle) -> Result<Settings, std::io::Error> {
     if settings.generation_model.is_none() {
         settings.generation_model = Settings::default().generation_model;
     }
+}
+
+pub fn get_settings(app: &AppHandle) -> Result<Settings, std::io::Error> {
+    let path = settings_path(app);
+    let settings = read_settings_file(&path);
     Ok(settings)
+}
+
+pub fn get_settings_cli() -> Settings {
+    let path = config_dir().join("settings.json");
+    read_settings_file(&path)
+}
+
+fn read_settings_file(path: &std::path::Path) -> Settings {
+    if !path.exists() {
+        return Settings::default();
+    }
+    let content = match fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return Settings::default(),
+    };
+    let mut settings: Settings = serde_json::from_str(&content).unwrap_or_default();
+    merge_defaults(&mut settings);
+    settings
 }
 
 pub fn set_settings(app: &AppHandle, settings: Settings) -> Result<(), std::io::Error> {

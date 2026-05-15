@@ -153,12 +153,21 @@ pub async fn semantic_index_rebuild(
     app: &tauri::AppHandle,
 ) -> Result<(), String> {
     let settings = get_settings(app).map_err(|e| e.to_string())?;
+    semantic_index_rebuild_with_settings(system_path, &settings).await
+}
+
+pub async fn semantic_index_rebuild_with_settings(
+    system_path: &str,
+    settings: &crate::settings::Settings,
+) -> Result<(), String> {
     let url = settings
         .ollama_url
-        .unwrap_or_else(|| "http://localhost:11434".to_string());
+        .as_deref()
+        .unwrap_or("http://localhost:11434");
     let model = settings
         .ollama_model
-        .unwrap_or_else(|| "nomic-embed-text".to_string());
+        .as_deref()
+        .unwrap_or("nomic-embed-text");
 
     let client = http_client();
     let mut chunks: Vec<EmbeddingChunk> = Vec::new();
@@ -191,7 +200,7 @@ pub async fn semantic_index_rebuild(
             if text.len() < 20 {
                 continue;
             }
-            match get_embedding(&client, &url, &model, &text).await {
+            match get_embedding(&client, url, model, &text).await {
                 Ok(mut vector) => {
                     normalize(&mut vector);
                     chunks.push(EmbeddingChunk {
@@ -210,7 +219,7 @@ pub async fn semantic_index_rebuild(
     }
 
     let index = SemanticIndex {
-        model: model.clone(),
+        model: model.to_string(),
         built_at: chrono::Utc::now().timestamp(),
         chunks,
     };
@@ -234,6 +243,16 @@ pub async fn semantic_search(
     top_k: usize,
     app: &tauri::AppHandle,
 ) -> Result<Vec<SemanticResult>, String> {
+    let settings = get_settings(app).map_err(|e| e.to_string())?;
+    semantic_search_with_settings(system_path, query, top_k, &settings).await
+}
+
+pub async fn semantic_search_with_settings(
+    system_path: &str,
+    query: &str,
+    top_k: usize,
+    settings: &crate::settings::Settings,
+) -> Result<Vec<SemanticResult>, String> {
     let index_path = semantic_index_path(system_path);
     if !index_path.exists() {
         return Ok(vec![]);
@@ -242,16 +261,17 @@ pub async fn semantic_search(
     let content = fs::read_to_string(&index_path).map_err(|e| e.to_string())?;
     let index: SemanticIndex = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
-    let settings = get_settings(app).map_err(|e| e.to_string())?;
     let url = settings
         .ollama_url
-        .unwrap_or_else(|| "http://localhost:11434".to_string());
+        .as_deref()
+        .unwrap_or("http://localhost:11434");
     let model = settings
         .ollama_model
-        .unwrap_or_else(|| "nomic-embed-text".to_string());
+        .as_deref()
+        .unwrap_or("nomic-embed-text");
 
     let client = http_client();
-    let mut query_vector = get_embedding(&client, &url, &model, query).await?;
+    let mut query_vector = get_embedding(&client, url, model, query).await?;
     normalize(&mut query_vector);
 
     let mut results: Vec<SemanticResult> = index
@@ -296,15 +316,24 @@ pub async fn test_ollama_connection(
     app: &tauri::AppHandle,
 ) -> Result<OllamaHealth, String> {
     let settings = get_settings(app).map_err(|e| e.to_string())?;
+    test_ollama_with_settings(&settings).await
+}
+
+pub async fn test_ollama_with_settings(
+    settings: &crate::settings::Settings,
+) -> Result<OllamaHealth, String> {
     let url = settings
         .ollama_url
-        .unwrap_or_else(|| "http://localhost:11434".to_string());
+        .as_deref()
+        .unwrap_or("http://localhost:11434");
     let embed_model = settings
         .ollama_model
-        .unwrap_or_else(|| "nomic-embed-text".to_string());
+        .as_deref()
+        .unwrap_or("nomic-embed-text");
     let gen_model = settings
         .generation_model
-        .unwrap_or_else(|| "gemma4:26b".to_string());
+        .as_deref()
+        .unwrap_or("gemma4:26b");
 
     let client = http_client();
 

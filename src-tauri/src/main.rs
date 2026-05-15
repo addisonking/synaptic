@@ -16,6 +16,7 @@ mod pty;
 mod semantic;
 mod watcher;
 mod sync;
+mod cli;
 
 use indexer::{build_index, get_backlinks, get_graph, get_tags};
 use settings::{get_settings, set_settings, Settings};
@@ -970,6 +971,18 @@ async fn sync_now_cmd(system_path: String, app: AppHandle) -> Result<(), String>
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+
+    // CLI mode: any args beyond the binary name
+    if args.len() > 1 {
+        let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
+        if let Err(e) = rt.block_on(cli::run()) {
+            eprintln!("error: {}", e);
+            std::process::exit(1);
+        }
+        return;
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
