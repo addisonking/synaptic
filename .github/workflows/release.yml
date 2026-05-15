@@ -73,6 +73,6 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "synaptic ${{ github.ref_name }}"
           releaseBody: ${{ steps.release_notes.outputs.body }}
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: "--target universal-apple-darwin"
