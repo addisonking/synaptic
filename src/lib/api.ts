@@ -231,3 +231,12 @@ export function getSyncState(): Promise<SyncState> {
 export function syncNow(systemPath: string): Promise<void> {
 	return invoke('sync_now_cmd', { systemPath });
 }
+
+// Add to PATH
+export function addToPath(): Promise<AddToPathResult> {
+	return invoke('add_to_path');
+}
+
+export function removeFromPath(): Promise<void> {
+	return invoke('remove_from_path');
+}

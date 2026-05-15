@@ -106,3 +106,8 @@ export interface ScratchEntry {
 	path: string;
 	modified: number;
 }
+
+export interface AddToPathResult {
+	path: string;
+	already_exists: boolean;
+}

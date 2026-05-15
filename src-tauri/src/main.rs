@@ -970,6 +970,69 @@ async fn sync_now_cmd(system_path: String, app: AppHandle) -> Result<(), String>
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
+#[derive(Serialize)]
+struct AddToPathResult {
+    path: String,
+    already_exists: bool,
+}
+
+#[tauri::command]
+fn add_to_path() -> Result<AddToPathResult, String> {
+    let bin = std::env::current_exe().map_err(|e| e.to_string())?;
+
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    let candidates: &[PathBuf] = &[
+        PathBuf::from("/usr/local/bin/synaptic"),
+        PathBuf::from(&home).join(".local/bin/synaptic"),
+    ];
+
+    for target in candidates {
+        if target.exists() {
+            if target.is_symlink() {
+                return Ok(AddToPathResult {
+                    path: target.to_string_lossy().to_string(),
+                    already_exists: true,
+                });
+            }
+            continue;
+        }
+
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+
+        match std::os::unix::fs::symlink(&bin, target) {
+            Ok(()) => {
+                return Ok(AddToPathResult {
+                    path: target.to_string_lossy().to_string(),
+                    already_exists: false,
+                });
+            }
+            Err(_) => continue,
+        }
+    }
+
+    Err("could not create symlink in /usr/local/bin or ~/.local/bin. try running with sudo, or add ~/.local/bin to your PATH manually.".to_string())
+}
+
+#[tauri::command]
+fn remove_from_path() -> Result<(), String> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    let candidates: &[PathBuf] = &[
+        PathBuf::from("/usr/local/bin/synaptic"),
+        PathBuf::from(&home).join(".local/bin/synaptic"),
+    ];
+
+    for target in candidates {
+        if target.is_symlink() {
+            fs::remove_file(target).map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+    }
+
+    Ok(())
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
@@ -1028,6 +1091,8 @@ fn main() {
             validate_github_token_cmd,
             get_sync_state_cmd,
             sync_now_cmd,
+            add_to_path,
+            remove_from_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

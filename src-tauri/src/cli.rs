@@ -105,6 +105,12 @@ enum Commands {
 
     /// Rebuild the semantic (Ollama) search index
     RebuildIndex,
+
+    /// Symlink the synaptic binary into /usr/local/bin or ~/.local/bin
+    AddToPath,
+
+    /// Remove the symlink created by add-to-path
+    RemoveFromPath,
 }
 
 // ─── Vault Resolution ───────────────────────────────────────────────────────
@@ -755,6 +761,63 @@ async fn cmd_rebuild_index(vault: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn cmd_add_to_path() -> Result<(), String> {
+    let bin = std::env::current_exe().map_err(|e| e.to_string())?;
+
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    let candidates: &[PathBuf] = &[
+        PathBuf::from("/usr/local/bin/synaptic"),
+        PathBuf::from(&home).join(".local/bin/synaptic"),
+    ];
+
+    for target in candidates {
+        if target.exists() {
+            if target.is_symlink() {
+                println!("already installed: {}", target.display());
+                return Ok(());
+            }
+            eprintln!("warning: {} exists but is not a symlink, skipping", target.display());
+            continue;
+        }
+
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+
+        match std::os::unix::fs::symlink(&bin, target) {
+            Ok(()) => {
+                println!("symlinked {} -> {}", target.display(), bin.display());
+                return Ok(());
+            }
+            Err(e) => {
+                eprintln!("could not create {}: {}", target.display(), e);
+                continue;
+            }
+        }
+    }
+
+    Err("could not symlink — try with sudo, or add ~/.local/bin to your PATH".to_string())
+}
+
+fn cmd_remove_from_path() -> Result<(), String> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    let candidates: &[PathBuf] = &[
+        PathBuf::from("/usr/local/bin/synaptic"),
+        PathBuf::from(&home).join(".local/bin/synaptic"),
+    ];
+
+    for target in candidates {
+        if target.is_symlink() {
+            std::fs::remove_file(target).map_err(|e| e.to_string())?;
+            println!("removed {}", target.display());
+            return Ok(());
+        }
+    }
+
+    println!("no symlink found");
+    Ok(())
+}
+
 // ─── Entry Point ─────────────────────────────────────────────────────────────
 
 pub async fn run() -> Result<(), String> {
@@ -831,5 +894,9 @@ pub async fn run() -> Result<(), String> {
             let vault = require_vault(&cli)?;
             cmd_rebuild_index(&vault).await
         }
+
+        Commands::AddToPath => cmd_add_to_path(),
+
+        Commands::RemoveFromPath => cmd_remove_from_path(),
     }
 }

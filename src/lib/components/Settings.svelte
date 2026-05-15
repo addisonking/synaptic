@@ -1,8 +1,10 @@
 <script lang="ts">
 import { Check, X } from 'lucide-svelte';
 import {
+	addToPath,
 	checkGitInstalled,
 	getSettings,
+	removeFromPath,
 	semanticIndexRebuild,
 	setSettings,
 	syncNow,
@@ -39,6 +41,8 @@ let tokenTestStatus = $state<
 let tokenTestOk = $state<boolean | null>(null);
 let syncNowStatus = $state<'idle' | 'syncing' | 'done' | 'error'>('idle');
 let syncNowError = $state<string | null>(null);
+let pathStatus = $state<'idle' | 'adding' | 'removing' | string>('idle');
+let pathOk = $state<boolean | null>(null);
 
 $effect(() => {
 	if (!open) {
@@ -122,6 +126,32 @@ async function handleSyncNow() {
 	}
 }
 
+async function handleAddToPath() {
+	pathStatus = 'adding';
+	pathOk = null;
+	try {
+		const result = await addToPath();
+		pathStatus = result.path;
+		pathOk = true;
+	} catch (e) {
+		pathStatus = String(e);
+		pathOk = false;
+	}
+}
+
+async function handleRemoveFromPath() {
+	pathStatus = 'removing';
+	pathOk = null;
+	try {
+		await removeFromPath();
+		pathStatus = 'idle';
+		pathOk = null;
+	} catch (e) {
+		pathStatus = String(e);
+		pathOk = false;
+	}
+}
+
 const tabItems = [
 	{ value: 'general', label: 'General' },
 	{ value: 'ai', label: 'AI / Search' },
@@ -144,6 +174,34 @@ const tabItems = [
               onchange={saveSettings}
             />
             <span class="hint">Path to the nvim executable used in the terminal pane.</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">CLI Access</span>
+            {#if pathStatus === 'idle'}
+              <Button
+                variant="default"
+                size="sm"
+                onclick={handleAddToPath}
+              >
+                Add to PATH
+              </Button>
+              <span class="hint">Symlink the CLI binary so you can run <code>synaptic</code> from any terminal.</span>
+            {:else if pathStatus === 'adding'}
+              <Button variant="default" size="sm" disabled>Adding…</Button>
+            {:else if pathStatus === 'removing'}
+              <Button variant="default" size="sm" disabled>Removing…</Button>
+            {:else}
+              {#if pathOk === true}
+                <span class="hint success">Installed: <code>{pathStatus}</code></span>
+              {:else}
+                <span class="hint error">{pathStatus}</span>
+              {/if}
+              <div class="path-actions">
+                <Button variant="default" size="sm" onclick={handleAddToPath}>Reinstall</Button>
+                <Button variant="default" size="sm" onclick={handleRemoveFromPath}>Remove</Button>
+              </div>
+            {/if}
           </div>
 
 
@@ -408,6 +466,18 @@ const tabItems = [
   }
   .hint.error {
     color: var(--error);
+  }
+  .hint.success {
+    color: var(--success);
+  }
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+  .path-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
   }
   .footer {
     display: flex;
