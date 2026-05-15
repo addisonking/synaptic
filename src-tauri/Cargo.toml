@@ -1,6 +1,6 @@
 [package]
 name = "synaptic"
-version = "0.8.0"
+version = "0.8.1"
 description = "A minimal OLED-dark note-taking app"
 authors = ["you"]
 edition = "2021"
