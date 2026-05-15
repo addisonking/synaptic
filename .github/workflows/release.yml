@@ -73,6 +73,20 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "synaptic ${{ github.ref_name }}"
           releaseBody: ${{ steps.release_notes.outputs.body }}
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           args: "--target universal-apple-darwin"
+
+      - name: publish release
+        run: |
+          if gh release view "${{ github.ref_name }}" &>/dev/null; then
+            gh release edit "${{ github.ref_name }}" --draft=false
+          else
+            gh release create "${{ github.ref_name }}" \
+              --title "synaptic ${{ github.ref_name }}" \
+              --notes "${{ steps.release_notes.outputs.body }}" \
+              --draft=false \
+              src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
