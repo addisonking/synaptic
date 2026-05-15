@@ -330,3 +330,43 @@ pub fn get_graph(system_path: &str) -> Result<GraphData, std::io::Error> {
 
     Ok(GraphData { nodes, edges })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_tags_inline_array() {
+        let content = "---\ntags: [foo, bar, baz]\n---\n# Body";
+        assert_eq!(parse_tags(content), vec!["foo", "bar", "baz"]);
+    }
+
+    #[test]
+    fn parse_tags_comma_separated() {
+        let content = "---\ntags: rust, testing, notes\n---\nbody";
+        assert_eq!(parse_tags(content), vec!["rust", "testing", "notes"]);
+    }
+
+    #[test]
+    fn parse_tags_multiline() {
+        let content = "---\ntags:\n  - alpha\n  - beta\n---\nbody";
+        assert_eq!(parse_tags(content), vec!["alpha", "beta"]);
+    }
+
+    #[test]
+    fn parse_tags_no_frontmatter() {
+        assert_eq!(parse_tags("# Just a heading"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn parse_tags_empty_frontmatter() {
+        let content = "---\ntitle: hello\n---\nbody";
+        assert_eq!(parse_tags(content), Vec::<String>::new());
+    }
+
+    #[test]
+    fn parse_tags_case_normalized() {
+        let content = "---\ntags: [FooBar, BazQux]\n---\nbody";
+        assert_eq!(parse_tags(content), vec!["foobar", "bazqux"]);
+    }
+}
