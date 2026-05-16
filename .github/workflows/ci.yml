@@ -33,3 +33,20 @@ jobs:
 
       - name: lint and format check
         run: bun run check
+
+      - name: run frontend tests
+        run: bun run test
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: cache rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: run rust tests
+        run: cargo test
+
+      - name: build frontend
+        run: bun run build
