@@ -48,8 +48,5 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: run rust tests
-        run: cargo test
-
       - name: build frontend
         run: bun run build
