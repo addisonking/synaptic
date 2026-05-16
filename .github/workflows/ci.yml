@@ -29,24 +29,13 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: lint and format check
         run: bun run check
 
-      - name: sync svelte-kit
-        run: bunx svelte-kit sync
-
       - name: run frontend tests
-        run: bun run test
-
-      - name: setup rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: cache rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
+        run: bunx svelte-kit sync && bun run test
 
       - name: build frontend
         run: bun run build

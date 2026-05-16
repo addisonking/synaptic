@@ -39,8 +39,11 @@ jobs:
         with:
           workspaces: src-tauri
 
+      - name: setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.10
+
       - name: install frontend dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: get previous tag
         id: prev_tag
@@ -69,6 +72,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUSTC_WRAPPER: sccache
+          SCCACHE_GHA_ENABLED: 'true'
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "synaptic ${{ github.ref_name }}"
