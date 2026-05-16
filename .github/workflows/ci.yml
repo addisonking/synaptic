@@ -34,6 +34,9 @@ jobs:
       - name: lint and format check
         run: bun run check
 
+      - name: sync svelte-kit
+        run: bunx svelte-kit sync
+
       - name: run frontend tests
         run: bun run test
 
